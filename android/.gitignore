@@ -1,0 +1,16 @@
+# Gradle
+.gradle/
+build/
+local.properties
+
+# IDE
+.idea/
+*.iml
+
+# Signing / secrets
+key.properties
+*.jks
+*.keystore
+
+# Firebase app config (Android)
+app/google-services.json
