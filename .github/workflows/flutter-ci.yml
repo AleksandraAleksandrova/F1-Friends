@@ -13,6 +13,8 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
 
     steps:
       - name: Checkout
@@ -40,11 +42,11 @@ jobs:
         run: flutter test
 
       - name: Write google-services.json (optional)
-        if: ${{ secrets.GOOGLE_SERVICES_JSON != '' }}
+        if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
         run: |
           mkdir -p android/app
-          printf '%s' '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+          printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
 
       - name: Build debug APK (when Firebase config secret exists)
-        if: ${{ secrets.GOOGLE_SERVICES_JSON != '' }}
+        if: ${{ env.GOOGLE_SERVICES_JSON != '' }}
         run: flutter build apk --debug
