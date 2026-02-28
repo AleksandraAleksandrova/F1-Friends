@@ -5,6 +5,7 @@ class RaceWeekend {
   final String raceName;
   final DateTime startTimeUtc;
   final int numberOfLaps;
+  final DateTime? qualifyingStartUtc;
 
   const RaceWeekend({
     required this.id,
@@ -13,6 +14,7 @@ class RaceWeekend {
     required this.raceName,
     required this.startTimeUtc,
     required this.numberOfLaps,
+    required this.qualifyingStartUtc,
   });
 
   DateTime get expectedEndTimeUtc =>

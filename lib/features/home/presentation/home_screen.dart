@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 
 import "../../leagues/presentation/leagues_screen.dart";
 import "../../profile/presentation/profile_screen.dart";
+import "../../races/presentation/races_screen.dart";
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,6 +16,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _pages = <Widget>[
     LeaguesScreen(),
+    RacesScreen(),
     ProfileScreen(),
   ];
 
@@ -30,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onDestinationSelected: (value) => setState(() => _index = value),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.groups), label: "Leagues"),
+          NavigationDestination(icon: Icon(Icons.flag), label: "Races"),
           NavigationDestination(icon: Icon(Icons.person), label: "Profile"),
         ],
       ),

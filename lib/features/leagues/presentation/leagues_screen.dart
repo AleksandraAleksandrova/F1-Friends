@@ -91,6 +91,9 @@ class LeaguesScreen extends ConsumerWidget {
     if (error is FirebaseException && error.code == "permission-denied") {
       return "Firestore permission denied. Deploy firestore.rules, then restart the app.";
     }
+    if (error is StateError) {
+      return error.message;
+    }
     return error.toString();
   }
 
@@ -135,7 +138,17 @@ class LeaguesScreen extends ConsumerWidget {
                     controller: endRoundController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: "End round"),
-                    validator: (value) => int.tryParse(value ?? "") == null ? "Invalid round" : null,
+                    validator: (value) {
+                      final end = int.tryParse(value ?? "");
+                      final start = int.tryParse(startRoundController.text);
+                      if (end == null) {
+                        return "Invalid round";
+                      }
+                      if (start != null && end <= start) {
+                        return "End round must be after start round";
+                      }
+                      return null;
+                    },
                   ),
                 ],
               ),
@@ -153,21 +166,29 @@ class LeaguesScreen extends ConsumerWidget {
                 }
                 final startRound = int.parse(startRoundController.text);
                 final endRound = int.parse(endRoundController.text);
-                if (startRound > endRound) {
+                if (startRound >= endRound) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Start round must be <= end round.")),
+                    const SnackBar(content: Text("End round must be after start round.")),
                   );
                   return;
                 }
 
-                await ref.read(leaguesControllerProvider.notifier).createLeague(
-                      name: nameController.text.trim(),
-                      seasonYear: int.parse(seasonController.text),
-                      startRound: startRound,
-                      endRound: endRound,
+                try {
+                  await ref.read(leaguesControllerProvider.notifier).createLeague(
+                        name: nameController.text.trim(),
+                        seasonYear: int.parse(seasonController.text),
+                        startRound: startRound,
+                        endRound: endRound,
+                      );
+                  if (context.mounted) {
+                    Navigator.of(context).pop(true);
+                  }
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(_friendlyError(error))),
                     );
-                if (context.mounted) {
-                  Navigator.of(context).pop(true);
+                  }
                 }
               },
               child: const Text("Create"),
@@ -183,10 +204,8 @@ class LeaguesScreen extends ConsumerWidget {
       );
     }
 
-    nameController.dispose();
-    seasonController.dispose();
-    startRoundController.dispose();
-    endRoundController.dispose();
+    // Keep controllers undisposed here because dialog lifecycle/rebuild timing
+    // caused use-after-dispose assertions in error paths.
   }
 
   Future<void> _showJoinLeagueDialog(BuildContext context, WidgetRef ref) async {
@@ -219,11 +238,19 @@ class LeaguesScreen extends ConsumerWidget {
                 if (!formKey.currentState!.validate()) {
                   return;
                 }
-                final result = await ref.read(leaguesControllerProvider.notifier).joinLeagueByCode(
-                      joinCode: codeController.text.trim(),
+                try {
+                  final result = await ref.read(leaguesControllerProvider.notifier).joinLeagueByCode(
+                        joinCode: codeController.text.trim(),
+                      );
+                  if (context.mounted) {
+                    Navigator.of(context).pop(result.joined);
+                  }
+                } catch (error) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(_friendlyError(error))),
                     );
-                if (context.mounted) {
-                  Navigator.of(context).pop(result.joined);
+                  }
                 }
               },
               child: const Text("Join"),
@@ -235,10 +262,10 @@ class LeaguesScreen extends ConsumerWidget {
 
     if (context.mounted && submitted != null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(submitted ? "Joined league." : "You are already a member.")),
+        SnackBar(content: Text(submitted ? "Joined league." : "Already joined. Duplicate join is not allowed.")),
       );
     }
 
-    codeController.dispose();
+    // Keep controller undisposed here for the same dialog timing reason.
   }
 }

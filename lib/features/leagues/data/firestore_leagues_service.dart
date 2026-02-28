@@ -23,18 +23,31 @@ class FirestoreLeaguesService implements LeaguesService {
 
   @override
   Stream<List<League>> watchUserLeagues(String userId) {
-    return _firestore
-        .collection(FirestorePaths.leagues)
-        .where("memberIds", arrayContains: userId)
-        .snapshots()
-        .map((snapshot) {
-      final leagues = snapshot.docs.map((doc) {
-        final data = doc.data();
-        return League.fromMap({
-          "id": doc.id,
-          ...data,
-        });
-      }).toList();
+    return _firestore.doc(FirestorePaths.user(userId)).snapshots().asyncMap((userSnap) async {
+      final data = userSnap.data();
+      final leagueIds = (data?["joinedLeagueIds"] as List?)
+              ?.whereType<String>()
+              .toSet()
+              .toList() ??
+          <String>[];
+      if (leagueIds.isEmpty) {
+        return <League>[];
+      }
+
+      final leagues = <League>[];
+      for (final leagueId in leagueIds) {
+        final doc = await _firestore.doc(FirestorePaths.league(leagueId)).get();
+        if (!doc.exists) {
+          continue;
+        }
+        leagues.add(
+          League.fromMap({
+            "id": doc.id,
+            ...doc.data()!,
+          }),
+        );
+      }
+
       leagues.sort((a, b) => b.seasonYear.compareTo(a.seasonYear));
       return leagues;
     });
@@ -45,12 +58,13 @@ class FirestoreLeaguesService implements LeaguesService {
     required String userId,
     required CreateLeagueInput input,
   }) async {
-    if (input.startRound > input.endRound) {
-      throw StateError("Start round cannot be greater than end round.");
+    if (input.startRound >= input.endRound) {
+      throw StateError("End round must be after start round.");
     }
 
     final joinCode = await _generateUniqueJoinCode();
     final leagueRef = _firestore.collection(FirestorePaths.leagues).doc();
+    final joinCodeRef = _firestore.doc(FirestorePaths.leagueJoinCode(joinCode));
     final memberRef = leagueRef.collection("members").doc(userId);
     final userRef = _firestore.doc(FirestorePaths.user(userId));
 
@@ -73,6 +87,11 @@ class FirestoreLeaguesService implements LeaguesService {
       "createdAt": FieldValue.serverTimestamp(),
       "updatedAt": FieldValue.serverTimestamp(),
     });
+    batch.set(joinCodeRef, {
+      "joinCode": joinCode,
+      "leagueId": leagueRef.id,
+      "createdAt": FieldValue.serverTimestamp(),
+    });
     batch.set(memberRef, {
       "userId": userId,
       "joinedAt": FieldValue.serverTimestamp(),
@@ -93,17 +112,16 @@ class FirestoreLeaguesService implements LeaguesService {
     required String joinCode,
   }) async {
     final normalizedCode = joinCode.trim().toUpperCase();
-    final query = await _firestore
-        .collection(FirestorePaths.leagues)
-        .where("joinCode", isEqualTo: normalizedCode)
-        .limit(1)
-        .get();
-
-    if (query.docs.isEmpty) {
+    final codeDoc = await _firestore.doc(FirestorePaths.leagueJoinCode(normalizedCode)).get();
+    if (!codeDoc.exists) {
       throw StateError("League with this join code was not found.");
     }
-
-    final leagueRef = query.docs.first.reference;
+    final codeData = codeDoc.data()!;
+    final leagueId = codeData["leagueId"] as String?;
+    if (leagueId == null || leagueId.isEmpty) {
+      throw StateError("Join code mapping is invalid.");
+    }
+    final leagueRef = _firestore.doc(FirestorePaths.league(leagueId));
     final memberRef = leagueRef.collection("members").doc(userId);
     final userRef = _firestore.doc(FirestorePaths.user(userId));
 
@@ -139,12 +157,8 @@ class FirestoreLeaguesService implements LeaguesService {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     for (var i = 0; i < 12; i++) {
       final code = List.generate(6, (_) => alphabet[_random.nextInt(alphabet.length)]).join();
-      final existing = await _firestore
-          .collection(FirestorePaths.leagues)
-          .where("joinCode", isEqualTo: code)
-          .limit(1)
-          .get();
-      if (existing.docs.isEmpty) {
+      final existing = await _firestore.doc(FirestorePaths.leagueJoinCode(code)).get();
+      if (!existing.exists) {
         return code;
       }
     }
