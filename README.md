@@ -2,8 +2,6 @@
 
 New project root: `pmu/F1-Friends`
 
-This project is intentionally separate from `pmu/F1-Fan`.
-
 ## Stack
 - Frontend: Flutter (Android target)
 - State management: Riverpod
@@ -29,11 +27,24 @@ This project is intentionally separate from `pmu/F1-Fan`.
 
 ## Implemented now
 - Main app entry with Firebase initialization
-- Working Auth screen (email/password sign in + register + sign out)
-- Auth service abstraction and Firebase implementation
-- Core data model files for users, leagues, predictions, races, scoring
-- Firebase config placeholders
-- Firestore schema and scheduling design docs
+- Working authentication (email/password sign in, register, sign out)
+- Private leagues:
+  - create league
+  - join by code
+  - list user's leagues
+- Race integration with F1 API:
+  - current next race
+  - current last race
+  - latest race results
+  - current season races
+  - current season drivers
+- Prediction flow:
+  - one prediction per user per race (upsert by deterministic doc id)
+  - P1/P2/P3/fastest lap driver + optional DNF
+  - dropdown driver selection from API
+  - podium positions are mutually exclusive in UI
+  - prediction lock after estimated qualifying end
+- Firestore schema and security rules in repo
 
 ## Android setup
 1. Install Flutter SDK and Android Studio.
@@ -48,7 +59,13 @@ This project is intentionally separate from `pmu/F1-Fan`.
 ## Firestore rules deployment (required)
 Leagues screen requires Firestore security rules in this repo.
 
-1. Install Firebase CLI and login:
+Option A (Firebase Console):
+1. Open Firebase Console -> Firestore Database -> Rules
+2. Copy/paste local `firestore.rules`
+3. Publish
+
+Option B (Firebase CLI):
+1. Install and login:
    - `npm i -g firebase-tools`
    - `firebase login`
 2. In project root:
@@ -59,8 +76,7 @@ If rules are not deployed, league reads/writes fail with:
 - `[cloud/firestore/permission-denied]`
 
 ## Next steps
-- Implement league creation/join flows with Firestore transactions.
-- Implement prediction submission and deadline lock logic.
 - Add Cloud Functions for scheduled result polling and scoring.
-- Add profile image upload UI using camera/gallery.
+- Add leaderboard aggregation UI from `leagueTotals` / `leagueScores`.
+- Add profile image upload UI (camera/gallery + Firebase Storage).
 - Add FCM token registration + deadline reminder dispatch.

@@ -1,6 +1,7 @@
 import "package:cloud_firestore/cloud_firestore.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
+import "../../../core/constants/firestore_paths.dart";
 import "../../auth/providers/auth_providers.dart";
 import "../data/firestore_leagues_service.dart";
 import "../data/leagues_service.dart";
@@ -87,4 +88,29 @@ class LeaguesController extends StateNotifier<AsyncValue<void>> {
 final leaguesControllerProvider = StateNotifierProvider<LeaguesController, AsyncValue<void>>((ref) {
   final leaguesService = ref.watch(leaguesServiceProvider);
   return LeaguesController(ref, leaguesService);
+});
+
+final leagueByIdProvider = StreamProvider.family<League?, String>((ref, leagueId) {
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  return firestore.doc(FirestorePaths.league(leagueId)).snapshots().map((snap) {
+    if (!snap.exists) {
+      return null;
+    }
+    return League.fromMap({"id": snap.id, ...snap.data()!});
+  });
+});
+
+final leagueMemberIdsProvider = StreamProvider.family<List<String>, String>((ref, leagueId) {
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  return firestore
+      .collection(FirestorePaths.leagues)
+      .doc(leagueId)
+      .collection("members")
+      .snapshots()
+      .map((snap) {
+    return snap.docs
+        .map((d) => (d.data()["userId"] as String?) ?? "")
+        .where((id) => id.isNotEmpty)
+        .toList();
+  });
 });

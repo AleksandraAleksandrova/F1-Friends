@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:cloud_firestore/cloud_firestore.dart";
 
+import "league_details_screen.dart";
 import "../providers/leagues_providers.dart";
 
 class LeaguesScreen extends ConsumerWidget {
@@ -46,7 +47,7 @@ class LeaguesScreen extends ConsumerWidget {
                         ? null
                         : () => _showJoinLeagueDialog(context, ref),
                     icon: const Icon(Icons.group_add),
-                    label: const Text("Join Code"),
+                    label: const Text("Join League"),
                   ),
                 ),
               ],
@@ -72,6 +73,13 @@ class LeaguesScreen extends ConsumerWidget {
                             "Season ${league.seasonYear} | R${league.startRound}-R${league.endRound} | Members ${league.memberCount}",
                           ),
                           trailing: Text(league.joinCode),
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => LeagueDetailsScreen(league: league),
+                              ),
+                            );
+                          },
                         ),
                       );
                     },
@@ -156,7 +164,7 @@ class LeaguesScreen extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text("Cancel"),
             ),
             FilledButton(
@@ -260,9 +268,14 @@ class LeaguesScreen extends ConsumerWidget {
       },
     );
 
-    if (context.mounted && submitted != null) {
+    if (context.mounted && submitted == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(submitted ? "Joined league." : "Already joined. Duplicate join is not allowed.")),
+        const SnackBar(content: Text("Joined league.")),
+      );
+    }
+    if (context.mounted && submitted == false) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Already joined. Duplicate join is not allowed.")),
       );
     }
 

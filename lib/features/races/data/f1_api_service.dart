@@ -1,6 +1,24 @@
 import "../domain/race_result.dart";
 import "../domain/race_weekend.dart";
 
+class F1Driver {
+  final String driverId;
+  final String shortName;
+  final String name;
+  final String surname;
+  final String teamId;
+
+  const F1Driver({
+    required this.driverId,
+    required this.shortName,
+    required this.name,
+    required this.surname,
+    required this.teamId,
+  });
+
+  String get displayLabel => "$shortName - $name $surname";
+}
+
 class LatestRaceSummary {
   final int seasonYear;
   final int round;
@@ -59,4 +77,6 @@ abstract class F1ApiService {
   Future<List<RaceWeekend>> fetchRacesBySeason(int year);
 
   Future<RaceResult?> fetchLatestRaceResultForScoring();
+
+  Future<List<F1Driver>> fetchCurrentDrivers();
 }

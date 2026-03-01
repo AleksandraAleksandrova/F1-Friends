@@ -14,4 +14,5 @@ class FirestorePaths {
   static String leagueJoinCode(String joinCode) => "$leagueJoinCodes/$joinCode";
   static String race(String raceId) => "$races/$raceId";
   static String leagueMember(String leagueId, String uid) => "$leagues/$leagueId/members/$uid";
+  static String prediction(String raceId, String uid) => "$predictions/${raceId}_$uid";
 }

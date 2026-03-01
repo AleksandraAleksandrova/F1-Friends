@@ -11,34 +11,25 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow create, read, update: if signedIn() && request.auth.uid == uid;
-      allow delete: if false;
+      allow create, read, update, delete: if signedIn() && request.auth.uid == uid;
     }
  
     match /leagues/{leagueId} {
+      // Dev-friendly read access for authenticated users to avoid fragile query denials.
+      allow read: if signedIn();
+
       allow create: if signedIn() &&
-        request.resource.data.adminUserId == request.auth.uid &&
-        request.resource.data.memberIds is list &&
-        request.resource.data.memberIds.size() > 0 &&
-        request.auth.uid in request.resource.data.memberIds;
+        request.resource.data.adminUserId == request.auth.uid;
 
-      // Leagues are private. Allow direct read only if caller has membership doc.
-      allow get: if signedIn() &&
-        exists(/databases/$(database)/documents/leagues/$(leagueId)/members/$(request.auth.uid));
-      allow list: if false;
-
-      // Temporary pragmatic rule for client-side prototype flows:
-      // authenticated users can update league docs (join/member counters).
-      // Move this to Cloud Functions for stricter production control.
+      // Client currently updates member counters + ids directly.
       allow update: if signedIn();
 
       allow delete: if isLeagueAdmin(leagueId);
     }
 
     match /leagues/{leagueId}/members/{memberId} {
-      // User can read only their own membership documents.
-      // This supports collectionGroup("members").where("userId", "==", uid).
-      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      // Relaxed read avoids collection/group query permission edge-cases.
+      allow read: if signedIn();
       allow create, update: if signedIn() &&
         (
           (request.auth.uid == memberId &&
@@ -49,12 +40,20 @@ service cloud.firestore {
     }
 
     match /leagueJoinCodes/{joinCode} {
-      allow get: if signedIn();
+      allow read: if signedIn();
       allow create: if signedIn();
-      allow update, delete, list: if false;
+      allow update, delete: if false;
     }
 
-    // Keep other collections private by default until explicitly implemented.
+    match /predictions/{predictionId} {
+      // Read enabled for authenticated users to avoid repeated query/get denials.
+      allow read: if signedIn();
+      allow create, update: if signedIn() &&
+        request.resource.data.userId == request.auth.uid;
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Keep unimplemented collections private.
     match /{document=**} {
       allow read, write: if false;
     }

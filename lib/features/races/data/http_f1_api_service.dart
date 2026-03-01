@@ -117,6 +117,26 @@ class HttpF1ApiService implements F1ApiService {
     );
   }
 
+  @override
+  Future<List<F1Driver>> fetchCurrentDrivers() async {
+    final jsonMap = await _getJson("$_base/current/drivers");
+    final drivers = (jsonMap["drivers"] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final mapped = drivers
+        .map(
+          (d) => F1Driver(
+            driverId: (d["driverId"] as String?) ?? "",
+            shortName: ((d["shortName"] as String?) ?? "").toUpperCase(),
+            name: (d["name"] as String?) ?? "",
+            surname: (d["surname"] as String?) ?? "",
+            teamId: (d["teamId"] as String?) ?? "",
+          ),
+        )
+        .where((d) => d.shortName.isNotEmpty)
+        .toList()
+      ..sort((a, b) => a.shortName.compareTo(b.shortName));
+    return mapped;
+  }
+
   Future<Map<String, dynamic>> _getJson(String url) async {
     final response = await _client.get(Uri.parse(url));
     if (response.statusCode < 200 || response.statusCode >= 300) {

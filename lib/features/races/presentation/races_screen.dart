@@ -1,6 +1,8 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
+import "../../predictions/presentation/prediction_dialog.dart";
+import "../../predictions/providers/predictions_providers.dart";
 import "../data/f1_api_service.dart";
 import "../domain/race_weekend.dart";
 import "../providers/races_providers.dart";
@@ -54,18 +56,7 @@ class RacesScreen extends ConsumerWidget {
                     ? const Text("No races found for current season.")
                     : Column(
                         children: hub.seasonRaces
-                            .map(
-                              (race) => ListTile(
-                                dense: true,
-                                contentPadding: EdgeInsets.zero,
-                                leading: CircleAvatar(
-                                  radius: 14,
-                                  child: Text("${race.round}"),
-                                ),
-                                title: Text(race.raceName),
-                                subtitle: Text(_formatUtc(race.startTimeUtc)),
-                              ),
-                            )
+                            .map((race) => _RacePredictionRow(race: race))
                             .toList(),
                       ),
               ),
@@ -83,8 +74,66 @@ class RacesScreen extends ConsumerWidget {
     );
   }
 
-  static String _formatUtc(DateTime dt) {
+  static String formatUtc(DateTime dt) {
     return "${dt.toIso8601String().replaceFirst(".000", "")} UTC";
+  }
+}
+
+class _RacePredictionRow extends ConsumerWidget {
+  const _RacePredictionRow({required this.race});
+
+  final RaceWeekend race;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final lockAt = PredictionDialog.lockAtUtc(race);
+    final isLocked = !DateTime.now().toUtc().isBefore(lockAt);
+    final lockSource = race.qualifyingStartUtc != null
+        ? "qualy end (estimated)"
+        : "race start";
+    final existingPredictionAsync = ref.watch(predictionForRaceProvider(race.id));
+
+    final buttonLabel = isLocked
+        ? "Locked"
+        : existingPredictionAsync.maybeWhen(
+            data: (p) => p == null ? "Predict" : "Update",
+            orElse: () => "Predict",
+          );
+
+    return ListTile(
+      dense: true,
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        radius: 14,
+        child: Text("${race.round}"),
+      ),
+      title: Text(race.raceName),
+      subtitle: Text(
+        "${RacesScreen.formatUtc(race.startTimeUtc)}\n"
+        "Lock: ${RacesScreen.formatUtc(lockAt)} ($lockSource)",
+      ),
+      isThreeLine: true,
+      trailing: OutlinedButton(
+        onPressed: isLocked
+            ? null
+            : () async {
+                final saved = await PredictionDialog.show(
+                  context: context,
+                  ref: ref,
+                  race: race,
+                );
+                if (saved) {
+                  ref.invalidate(predictionForRaceProvider(race.id));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Prediction saved.")),
+                    );
+                  }
+                }
+              },
+        child: Text(buttonLabel),
+      ),
+    );
   }
 }
 
@@ -126,10 +175,10 @@ class _RaceTile extends StatelessWidget {
         const SizedBox(height: 4),
         Text("Round ${race.round}, Season ${race.seasonYear}"),
         const SizedBox(height: 4),
-        Text("Race start: ${RacesScreen._formatUtc(race.startTimeUtc)}"),
-        Text("Expected end: ${RacesScreen._formatUtc(race.expectedEndTimeUtc)}"),
+        Text("Race start: ${RacesScreen.formatUtc(race.startTimeUtc)}"),
+        Text("Expected end: ${RacesScreen.formatUtc(race.expectedEndTimeUtc)}"),
         if (race.qualifyingStartUtc != null)
-          Text("Qualy start: ${RacesScreen._formatUtc(race.qualifyingStartUtc!)}"),
+          Text("Qualy start: ${RacesScreen.formatUtc(race.qualifyingStartUtc!)}"),
       ],
     );
   }

@@ -3,6 +3,7 @@ import "package:http/http.dart" as http;
 
 import "../data/f1_api_service.dart";
 import "../data/http_f1_api_service.dart";
+import "../domain/race_weekend.dart";
 
 final httpClientProvider = Provider<http.Client>((ref) {
   final client = http.Client();
@@ -35,4 +36,14 @@ final raceHubProvider = FutureProvider<RaceHubData>((ref) async {
     latestResults: latestResults,
     seasonRaces: seasonRaces,
   );
+});
+
+final currentDriversProvider = FutureProvider<List<F1Driver>>((ref) async {
+  final api = ref.watch(f1ApiServiceProvider);
+  return api.fetchCurrentDrivers();
+});
+
+final racesBySeasonProvider = FutureProvider.family<List<RaceWeekend>, int>((ref, seasonYear) async {
+  final api = ref.watch(f1ApiServiceProvider);
+  return api.fetchRacesBySeason(seasonYear);
 });
