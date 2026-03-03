@@ -6,6 +6,7 @@ import "../../auth/providers/auth_providers.dart";
 import "../data/firestore_leagues_service.dart";
 import "../data/leagues_service.dart";
 import "../domain/league.dart";
+import "../domain/league_member.dart";
 
 final firebaseFirestoreProvider = Provider<FirebaseFirestore>((ref) {
   return FirebaseFirestore.instance;
@@ -100,7 +101,11 @@ final leagueByIdProvider = StreamProvider.family<League?, String>((ref, leagueId
   });
 });
 
-final leagueMemberIdsProvider = StreamProvider.family<List<String>, String>((ref, leagueId) {
+final leagueMembersProvider = StreamProvider.family<List<LeagueMember>, String>((ref, leagueId) {
+  final uid = ref.watch(authUserIdProvider).value;
+  if (uid == null) {
+    return Stream.value(const <LeagueMember>[]);
+  }
   final firestore = ref.watch(firebaseFirestoreProvider);
   return firestore
       .collection(FirestorePaths.leagues)
@@ -108,9 +113,32 @@ final leagueMemberIdsProvider = StreamProvider.family<List<String>, String>((ref
       .collection("members")
       .snapshots()
       .map((snap) {
-    return snap.docs
-        .map((d) => (d.data()["userId"] as String?) ?? "")
-        .where((id) => id.isNotEmpty)
+    final members = snap.docs
+        .map((d) => LeagueMember.fromMap(d.data()))
+        .where((m) => m.userId.isNotEmpty)
         .toList();
+    members.sort((a, b) {
+      final byPoints = b.totalPoints.compareTo(a.totalPoints);
+      if (byPoints != 0) {
+        return byPoints;
+      }
+      return a.userId.compareTo(b.userId);
+    });
+    return members;
   });
+});
+
+final usernameByUserIdProvider = FutureProvider.family<String, String>((ref, uid) async {
+  final currentUid = ref.watch(authUserIdProvider).value;
+  if (currentUid == null) {
+    return uid.length > 6 ? uid.substring(0, 6) : uid;
+  }
+  final firestore = ref.watch(firebaseFirestoreProvider);
+  final doc = await firestore.doc(FirestorePaths.user(uid)).get();
+  final data = doc.data();
+  final username = data?["username"] as String?;
+  if (username != null && username.trim().isNotEmpty) {
+    return username.trim();
+  }
+  return uid.length > 6 ? uid.substring(0, 6) : uid;
 });

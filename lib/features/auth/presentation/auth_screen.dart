@@ -64,72 +64,98 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text("F1 Friends")),
       body: authUserId.when(
         data: (uid) {
           if (uid != null) {
-            return const HomeScreen();
+            return KeyedSubtree(
+              key: ValueKey(uid),
+              child: const HomeScreen(),
+            );
           }
 
-          return Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _isLoginMode ? "Sign In" : "Create Account",
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(labelText: "Email"),
-                        validator: (value) {
-                          final v = value?.trim() ?? "";
-                          if (v.isEmpty || !v.contains("@")) {
-                            return "Enter a valid email";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(labelText: "Password"),
-                        validator: (value) {
-                          final v = value ?? "";
-                          if (v.length < 6) {
-                            return "Password must be at least 6 characters";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      FilledButton(
-                        onPressed: authState.isLoading ? null : _submit,
-                        child: Text(_isLoginMode ? "Sign In" : "Register"),
-                      ),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: authState.isLoading
-                            ? null
-                            : () => setState(() {
-                                  _isLoginMode = !_isLoginMode;
-                                }),
-                        child: Text(
-                          _isLoginMode
-                              ? "Need an account? Register"
-                              : "Have an account? Sign In",
+          return DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFFFF2F2), Color(0xFFF7F7FA)],
+              ),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "F1 Friends",
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              _isLoginMode ? "Sign In" : "Create Account",
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: const InputDecoration(labelText: "Email"),
+                              validator: (value) {
+                                final v = value?.trim() ?? "";
+                                if (v.isEmpty || !v.contains("@")) {
+                                  return "Enter a valid email";
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _passwordController,
+                              obscureText: true,
+                              decoration: const InputDecoration(labelText: "Password"),
+                              validator: (value) {
+                                final v = value ?? "";
+                                if (v.length < 6) {
+                                  return "Password must be at least 6 characters";
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                onPressed: authState.isLoading ? null : _submit,
+                                child: Text(_isLoginMode ? "Sign In" : "Register"),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextButton(
+                              onPressed: authState.isLoading
+                                  ? null
+                                  : () => setState(() {
+                                        _isLoginMode = !_isLoginMode;
+                                      }),
+                              child: Text(
+                                _isLoginMode
+                                    ? "Need an account? Register"
+                                    : "Have an account? Sign In",
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),

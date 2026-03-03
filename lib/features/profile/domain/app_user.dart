@@ -24,11 +24,13 @@ class AppUser {
   }
 
   factory AppUser.fromMap(Map<String, dynamic> map) {
+    final email = (map["email"] as String?) ?? "";
+    final fallbackUsername = email.contains("@") ? email.split("@").first : "driver";
     return AppUser(
       id: map["id"] as String,
-      username: map["username"] as String,
-      email: map["email"] as String,
-      displayName: map["displayName"] as String?,
+      username: (map["username"] as String?) ?? fallbackUsername,
+      email: email,
+      displayName: (map["displayName"] as String?) ?? (map["username"] as String?) ?? fallbackUsername,
       profileImageUrl: map["profileImageUrl"] as String?,
     );
   }

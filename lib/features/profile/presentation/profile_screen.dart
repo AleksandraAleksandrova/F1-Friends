@@ -1,35 +1,191 @@
 import "package:firebase_auth/firebase_auth.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "package:image_picker/image_picker.dart";
 
 import "../../auth/providers/auth_providers.dart";
+import "../providers/profile_providers.dart";
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _usernameController = TextEditingController();
+  String? _seededUserId;
+  bool _editingUsername = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
+    final profileState = ref.watch(profileControllerProvider);
+    final appUserAsync = ref.watch(currentAppUserProvider);
     final user = FirebaseAuth.instance.currentUser;
+
+    ref.listen<AsyncValue<void>>(profileControllerProvider, (previous, next) {
+      next.whenOrNull(
+        error: (error, _) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.toString())),
+          );
+        },
+      );
+    });
 
     return Scaffold(
       appBar: AppBar(title: const Text("Profile")),
       body: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Email: ${user?.email ?? "unknown"}"),
-            const SizedBox(height: 8),
-            Text("User ID: ${user?.uid ?? "unknown"}"),
-            const SizedBox(height: 20),
-            FilledButton(
-              onPressed: authState.isLoading
-                  ? null
-                  : () => ref.read(authControllerProvider.notifier).signOut(),
-              child: const Text("Sign Out"),
-            ),
-          ],
+        child: appUserAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, _) => Center(child: Text("Failed to load profile: $error")),
+          data: (appUser) {
+            if (appUser != null && _seededUserId != appUser.id) {
+              _seededUserId = appUser.id;
+              _usernameController.text = appUser.username;
+              _usernameController.selection =
+                  TextSelection.collapsed(offset: _usernameController.text.length);
+            }
+            final fallbackName = ((user?.uid ?? "").length >= 6)
+                ? (user!.uid.substring(0, 6))
+                : (user?.uid ?? "driver");
+            final currentName = (appUser?.username.trim().isNotEmpty ?? false)
+                ? appUser!.username.trim()
+                : fallbackName;
+
+            return ListView(
+              children: [
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            CircleAvatar(
+                              radius: 44,
+                              backgroundImage: (appUser?.profileImageUrl?.isNotEmpty ?? false)
+                                  ? NetworkImage(appUser!.profileImageUrl!)
+                                  : null,
+                              child: (appUser?.profileImageUrl?.isNotEmpty ?? false)
+                                  ? null
+                                  : const Icon(Icons.person, size: 44),
+                            ),
+                            PopupMenuButton<ImageSource>(
+                              enabled: !profileState.isLoading,
+                              tooltip: "Change photo",
+                              onSelected: (source) => ref
+                                  .read(profileControllerProvider.notifier)
+                                  .updateProfileImage(source),
+                              itemBuilder: (context) => const [
+                                PopupMenuItem(
+                                  value: ImageSource.gallery,
+                                  child: Text("Choose from gallery"),
+                                ),
+                                PopupMenuItem(
+                                  value: ImageSource.camera,
+                                  child: Text("Take photo"),
+                                ),
+                              ],
+                              child: const CircleAvatar(
+                                radius: 16,
+                                child: Icon(Icons.camera_alt, size: 16),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        if (!_editingUsername)
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  currentName,
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: profileState.isLoading
+                                    ? null
+                                    : () {
+                                        setState(() {
+                                          _editingUsername = true;
+                                          _usernameController.text = currentName;
+                                          _usernameController.selection = TextSelection.collapsed(
+                                            offset: _usernameController.text.length,
+                                          );
+                                        });
+                                      },
+                                icon: const Icon(Icons.edit),
+                                tooltip: "Edit username",
+                              ),
+                            ],
+                          )
+                        else ...[
+                          TextField(
+                            controller: _usernameController,
+                            decoration: const InputDecoration(
+                              labelText: "Username",
+                              helperText: "At least 3 characters",
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: profileState.isLoading
+                                      ? null
+                                      : () => setState(() => _editingUsername = false),
+                                  child: const Text("Cancel"),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: FilledButton(
+                                  onPressed: profileState.isLoading
+                                      ? null
+                                      : () async {
+                                          await ref
+                                              .read(profileControllerProvider.notifier)
+                                              .updateUsername(_usernameController.text);
+                                          if (!mounted) {
+                                            return;
+                                          }
+                                          setState(() => _editingUsername = false);
+                                        },
+                                  child: const Text("Save"),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text("Email: ${user?.email ?? "unknown"}"),
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: authState.isLoading
+                      ? null
+                      : () => ref.read(authControllerProvider.notifier).signOut(),
+                  child: const Text("Sign Out"),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

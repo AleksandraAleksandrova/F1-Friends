@@ -1,24 +1,41 @@
 import "package:flutter/material.dart";
+import "package:flutter_riverpod/flutter_riverpod.dart";
 
+import "../../../core/notifications/local_notification_service.dart";
 import "../../leagues/presentation/leagues_screen.dart";
 import "../../profile/presentation/profile_screen.dart";
+import "../../profile/providers/profile_providers.dart";
 import "../../races/presentation/races_screen.dart";
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   int _index = 0;
+  bool _startupPromptShown = false;
 
   static const _pages = <Widget>[
     LeaguesScreen(),
     RacesScreen(),
     ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(profileControllerProvider.notifier).ensureCurrentUserDoc();
+      if (_startupPromptShown) {
+        return;
+      }
+      _startupPromptShown = true;
+      await LocalNotificationService.showPredictionReminder();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

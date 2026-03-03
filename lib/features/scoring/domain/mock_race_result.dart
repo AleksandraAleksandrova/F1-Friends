@@ -1,0 +1,15 @@
+class MockRaceResult {
+  const MockRaceResult({
+    required this.p1DriverCode,
+    required this.p2DriverCode,
+    required this.p3DriverCode,
+    required this.fastestLapDriverCode,
+    required this.dnfCount,
+  });
+
+  final String p1DriverCode;
+  final String p2DriverCode;
+  final String p3DriverCode;
+  final String fastestLapDriverCode;
+  final int dnfCount;
+}

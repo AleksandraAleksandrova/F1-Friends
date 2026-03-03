@@ -11,31 +11,22 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow create, read, update, delete: if signedIn() && request.auth.uid == uid;
+      // Authenticated users can read usernames/profile metadata for league views.
+      allow read: if signedIn();
+      allow create, update, delete: if signedIn() && request.auth.uid == uid;
     }
  
     match /leagues/{leagueId} {
-      // Dev-friendly read access for authenticated users to avoid fragile query denials.
       allow read: if signedIn();
-
       allow create: if signedIn() &&
         request.resource.data.adminUserId == request.auth.uid;
-
-      // Client currently updates member counters + ids directly.
       allow update: if signedIn();
-
       allow delete: if isLeagueAdmin(leagueId);
     }
 
     match /leagues/{leagueId}/members/{memberId} {
-      // Relaxed read avoids collection/group query permission edge-cases.
       allow read: if signedIn();
-      allow create, update: if signedIn() &&
-        (
-          (request.auth.uid == memberId &&
-            request.resource.data.userId == request.auth.uid) ||
-          isLeagueAdmin(leagueId)
-        );
+      allow create, update: if signedIn();
       allow delete: if isLeagueAdmin(leagueId);
     }
 
@@ -46,16 +37,37 @@ service cloud.firestore {
     }
 
     match /predictions/{predictionId} {
-      // Read enabled for authenticated users to avoid repeated query/get denials.
       allow read: if signedIn();
       allow create, update: if signedIn() &&
         request.resource.data.userId == request.auth.uid;
       allow delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
 
-    // Keep unimplemented collections private.
+    match /races/{raceId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /raceResults/{raceId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /leagueScores/{leagueId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // Demo mode: allow authenticated read visibility across the app to avoid
+    // brittle query denials while features are still being built.
     match /{document=**} {
-      allow read, write: if false;
+      allow read: if signedIn();
+      allow write: if false;
     }
   }
 }

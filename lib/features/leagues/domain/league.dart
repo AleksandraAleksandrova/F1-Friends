@@ -8,6 +8,7 @@ class League {
   final int endRound;
   final bool scoringLocked;
   final int memberCount;
+  final Map<String, int> scoringRules;
 
   const League({
     required this.id,
@@ -19,6 +20,7 @@ class League {
     required this.endRound,
     required this.scoringLocked,
     required this.memberCount,
+    required this.scoringRules,
   });
 
   Map<String, dynamic> toMap() {
@@ -32,10 +34,12 @@ class League {
       "endRound": endRound,
       "scoringLocked": scoringLocked,
       "memberCount": memberCount,
+      "scoringRules": scoringRules,
     };
   }
 
   factory League.fromMap(Map<String, dynamic> map) {
+    final rawRules = (map["scoringRules"] as Map<String, dynamic>?) ?? const <String, dynamic>{};
     return League(
       id: map["id"] as String,
       name: map["name"] as String,
@@ -46,6 +50,14 @@ class League {
       endRound: (map["endRound"] as num).toInt(),
       scoringLocked: map["scoringLocked"] as bool,
       memberCount: ((map["memberCount"] as num?) ?? 0).toInt(),
+      scoringRules: {
+        "pointsP1Exact": ((rawRules["pointsP1Exact"] as num?) ?? 10).toInt(),
+        "pointsP2Exact": ((rawRules["pointsP2Exact"] as num?) ?? 8).toInt(),
+        "pointsP3Exact": ((rawRules["pointsP3Exact"] as num?) ?? 6).toInt(),
+        "pointsFastestLapExact": ((rawRules["pointsFastestLapExact"] as num?) ?? 4).toInt(),
+        "pointsDnfExact": ((rawRules["pointsDnfExact"] as num?) ?? 3).toInt(),
+        "pointsBonusAllPodiumExact": ((rawRules["pointsBonusAllPodiumExact"] as num?) ?? 5).toInt(),
+      },
     );
   }
 }

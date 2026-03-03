@@ -21,6 +21,10 @@ final predictionForRaceProvider = FutureProvider.family<Prediction?, String>((re
 });
 
 final predictionsForRaceProvider = StreamProvider.family<List<Prediction>, String>((ref, raceId) {
+  final uid = ref.watch(authUserIdProvider).value;
+  if (uid == null) {
+    return Stream.value(const <Prediction>[]);
+  }
   final service = ref.watch(predictionsServiceProvider);
   return service.watchPredictionsForRace(raceId: raceId);
 });

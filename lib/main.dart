@@ -3,6 +3,7 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "app.dart";
+import "core/notifications/local_notification_service.dart";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,5 +17,6 @@ Future<void> main() async {
     }
     Firebase.app();
   }
+  await LocalNotificationService.initialize();
   runApp(const ProviderScope(child: F1FriendsApp()));
 }

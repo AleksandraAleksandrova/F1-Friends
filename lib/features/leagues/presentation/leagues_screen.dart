@@ -28,29 +28,40 @@ class LeaguesScreen extends ConsumerWidget {
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: actionState.isLoading
-                        ? null
-                        : () => _showCreateLeagueDialog(context, ref),
-                    icon: const Icon(Icons.add),
-                    label: const Text("Create League"),
-                  ),
+            Text(
+              "Compete with private friend leagues",
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 10),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.icon(
+                        onPressed: actionState.isLoading
+                            ? null
+                            : () => _showCreateLeagueDialog(context, ref),
+                        icon: const Icon(Icons.add),
+                        label: const Text("Create League"),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: actionState.isLoading
+                            ? null
+                            : () => _showJoinLeagueDialog(context, ref),
+                        icon: const Icon(Icons.group_add),
+                        label: const Text("Join League"),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: actionState.isLoading
-                        ? null
-                        : () => _showJoinLeagueDialog(context, ref),
-                    icon: const Icon(Icons.group_add),
-                    label: const Text("Join League"),
-                  ),
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -66,13 +77,28 @@ class LeaguesScreen extends ConsumerWidget {
                     separatorBuilder: (context, index) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final league = leagues[index];
+                      final adminNameAsync = ref.watch(usernameByUserIdProvider(league.adminUserId));
+                      final adminDisplay = adminNameAsync.maybeWhen(
+                        data: (name) => name,
+                        orElse: () => (league.adminUserId.length > 6
+                            ? league.adminUserId.substring(0, 6)
+                            : league.adminUserId),
+                      );
                       return Card(
                         child: ListTile(
                           title: Text(league.name),
                           subtitle: Text(
-                            "Season ${league.seasonYear} | R${league.startRound}-R${league.endRound} | Members ${league.memberCount}",
+                            "Admin $adminDisplay | Season ${league.seasonYear} | "
+                            "R${league.startRound}-R${league.endRound} | Members ${league.memberCount}",
                           ),
-                          trailing: Text(league.joinCode),
+                          trailing: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(league.joinCode),
+                          ),
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
@@ -238,7 +264,7 @@ class LeaguesScreen extends ConsumerWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text("Cancel"),
             ),
             FilledButton(

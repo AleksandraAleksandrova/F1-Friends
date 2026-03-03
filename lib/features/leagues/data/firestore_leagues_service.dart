@@ -96,6 +96,7 @@ class FirestoreLeaguesService implements LeaguesService {
       "userId": userId,
       "joinedAt": FieldValue.serverTimestamp(),
       "role": "admin",
+      "totalPoints": 0,
     });
     batch.set(userRef, {
       "joinedLeagueIds": FieldValue.arrayUnion([leagueRef.id]),
@@ -140,6 +141,7 @@ class FirestoreLeaguesService implements LeaguesService {
           "userId": userId,
           "joinedAt": FieldValue.serverTimestamp(),
           "role": "member",
+          "totalPoints": 0,
         }, SetOptions(merge: true));
         tx.set(userRef, {
           "joinedLeagueIds": FieldValue.arrayUnion([leagueRef.id]),
