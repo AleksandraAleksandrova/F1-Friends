@@ -53,61 +53,38 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    DropdownMenu<String>(
-                      width: 320,
-                      hintText: "Type driver (e.g. char)",
-                      label: const Text("P1"),
-                      initialSelection: p1,
-                      enableFilter: true,
-                      enableSearch: true,
+                    _driverSearchField(
+                      label: "P1",
+                      value: p1,
+                      drivers: p1Options,
                       onSelected: (v) => setLocalState(() => p1 = v),
-                      dropdownMenuEntries: p1Options
-                          .map((d) => DropdownMenuEntry(value: d.shortName, label: d.displayLabel))
-                          .toList(),
                     ),
                     const SizedBox(height: 8),
-                    DropdownMenu<String>(
-                      width: 320,
-                      hintText: "Type driver",
-                      label: const Text("P2"),
-                      initialSelection: p2,
-                      enableFilter: true,
-                      enableSearch: true,
+                    _driverSearchField(
+                      label: "P2",
+                      value: p2,
+                      drivers: p2Options,
                       onSelected: (v) => setLocalState(() => p2 = v),
-                      dropdownMenuEntries: p2Options
-                          .map((d) => DropdownMenuEntry(value: d.shortName, label: d.displayLabel))
-                          .toList(),
                     ),
                     const SizedBox(height: 8),
-                    DropdownMenu<String>(
-                      width: 320,
-                      hintText: "Type driver",
-                      label: const Text("P3"),
-                      initialSelection: p3,
-                      enableFilter: true,
-                      enableSearch: true,
+                    _driverSearchField(
+                      label: "P3",
+                      value: p3,
+                      drivers: p3Options,
                       onSelected: (v) => setLocalState(() => p3 = v),
-                      dropdownMenuEntries: p3Options
-                          .map((d) => DropdownMenuEntry(value: d.shortName, label: d.displayLabel))
-                          .toList(),
                     ),
                     const SizedBox(height: 8),
-                    DropdownMenu<String>(
-                      width: 320,
-                      hintText: "Type driver",
-                      label: const Text("Fastest lap"),
-                      initialSelection: fastestLap,
-                      enableFilter: true,
-                      enableSearch: true,
+                    _driverSearchField(
+                      label: "Fastest lap",
+                      value: fastestLap,
+                      drivers: drivers,
                       onSelected: (v) => setLocalState(() => fastestLap = v),
-                      dropdownMenuEntries: drivers
-                          .map((d) => DropdownMenuEntry(value: d.shortName, label: d.displayLabel))
-                          .toList(),
                     ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: dnfController,
                       keyboardType: TextInputType.number,
+                      style: const TextStyle(color: Colors.black87),
                       decoration: const InputDecoration(labelText: "DNF count"),
                     ),
                   ],
@@ -156,6 +133,33 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _driverSearchField({
+    required String label,
+    required String? value,
+    required List<F1Driver> drivers,
+    required ValueChanged<String?> onSelected,
+  }) {
+    return DropdownMenu<String>(
+      width: 320,
+      label: Text(label),
+      hintText: "Type to filter (e.g. max)",
+      enableFilter: true,
+      enableSearch: true,
+      initialSelection: value,
+      filterCallback: (entries, filter) {
+        final query = filter.trim().toLowerCase();
+        if (query.isEmpty) {
+          return entries;
+        }
+        return entries.where((entry) => entry.label.toLowerCase().contains(query)).toList();
+      },
+      onSelected: onSelected,
+      dropdownMenuEntries: drivers
+          .map((d) => DropdownMenuEntry<String>(value: d.shortName, label: d.displayLabel))
+          .toList(),
     );
   }
 
@@ -214,35 +218,29 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                     if (leagueRaces.isEmpty)
                       const Text("No races found in this league range.")
                     else
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedRaceId,
-                        decoration: const InputDecoration(labelText: "Race"),
-                        isExpanded: true,
-                        items: leagueRaces
-                            .map((race) => DropdownMenuItem<String>(
-                                  value: race.id,
-                                  child: Text(
-                                    "R${race.round} - ${race.raceName}",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ))
-                            .toList(),
-                        selectedItemBuilder: (context) {
-                          return leagueRaces
-                              .map(
-                                (race) => Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    "R${race.round} - ${race.raceName}",
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              )
-                              .toList();
+                      DropdownMenu<String>(
+                        width: 360,
+                        label: const Text("Race"),
+                        hintText: "Type race name or round",
+                        enableFilter: true,
+                        enableSearch: true,
+                        initialSelection: _selectedRaceId,
+                        filterCallback: (entries, filter) {
+                          final query = filter.trim().toLowerCase();
+                          if (query.isEmpty) {
+                            return entries;
+                          }
+                          return entries.where((entry) => entry.label.toLowerCase().contains(query)).toList();
                         },
-                        onChanged: (value) => setState(() => _selectedRaceId = value),
+                        onSelected: (value) => setState(() => _selectedRaceId = value),
+                        dropdownMenuEntries: leagueRaces
+                            .map(
+                              (race) => DropdownMenuEntry<String>(
+                                value: race.id,
+                                label: "R${race.round} - ${race.raceName}",
+                              ),
+                            )
+                            .toList(),
                       ),
                     const SizedBox(height: 12),
                     if (selectedRace != null) ...[

@@ -36,7 +36,7 @@ class LocalNotificationService {
 
     await _show(
       "F1 Friends",
-      "Share your race predictions with friends today to earn points!",
+      "Create a league and invite friends to predict next race!",
     );
   }
 

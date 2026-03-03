@@ -28,7 +28,6 @@ class PredictionDialog {
       return false;
     }
 
-    final formKey = GlobalKey<FormState>();
     final dnfController = TextEditingController(text: existing?.dnfCount?.toString() ?? "");
     String? p1 = _toExistingOrNull(existing?.p1DriverCode, drivers);
     String? p2 = _toExistingOrNull(existing?.p2DriverCode, drivers);
@@ -42,67 +41,58 @@ class PredictionDialog {
               builder: (context, setState) {
                 return AlertDialog(
                   title: Text("Prediction: ${race.raceName}"),
-                  content: Form(
-                    key: formKey,
-                    child: SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _driverDropdown(
-                            label: "P1 driver",
-                            value: p1,
-                            drivers: drivers,
-                            excludedShortNames: {
-                              if (p2 != null) p2!,
-                              if (p3 != null) p3!,
-                            },
-                            onChanged: (v) => setState(() => p1 = v),
-                          ),
-                          _driverDropdown(
-                            label: "P2 driver",
-                            value: p2,
-                            drivers: drivers,
-                            excludedShortNames: {
-                              if (p1 != null) p1!,
-                              if (p3 != null) p3!,
-                            },
-                            onChanged: (v) => setState(() => p2 = v),
-                          ),
-                          _driverDropdown(
-                            label: "P3 driver",
-                            value: p3,
-                            drivers: drivers,
-                            excludedShortNames: {
-                              if (p1 != null) p1!,
-                              if (p2 != null) p2!,
-                            },
-                            onChanged: (v) => setState(() => p3 = v),
-                          ),
-                          _driverDropdown(
-                            label: "Fastest lap driver",
-                            value: fl,
-                            drivers: drivers,
-                            excludedShortNames: const <String>{},
-                            onChanged: (v) => setState(() => fl = v),
-                          ),
-                          TextFormField(
-                            controller: dnfController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: "DNF count (optional)"),
-                            validator: (value) {
-                              final v = value?.trim() ?? "";
-                              if (v.isEmpty) {
-                                return null;
-                              }
-                              final parsed = int.tryParse(v);
-                              if (parsed == null || parsed < 0) {
-                                return "DNF must be a non-negative integer";
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _driverDropdown(
+                          label: "P1 driver",
+                          value: p1,
+                          drivers: drivers,
+                          excludedShortNames: {
+                            if (p2 != null) p2!,
+                            if (p3 != null) p3!,
+                          },
+                          onChanged: (v) => setState(() => p1 = v),
+                        ),
+                        const SizedBox(height: 10),
+                        _driverDropdown(
+                          label: "P2 driver",
+                          value: p2,
+                          drivers: drivers,
+                          excludedShortNames: {
+                            if (p1 != null) p1!,
+                            if (p3 != null) p3!,
+                          },
+                          onChanged: (v) => setState(() => p2 = v),
+                        ),
+                        const SizedBox(height: 10),
+                        _driverDropdown(
+                          label: "P3 driver",
+                          value: p3,
+                          drivers: drivers,
+                          excludedShortNames: {
+                            if (p1 != null) p1!,
+                            if (p2 != null) p2!,
+                          },
+                          onChanged: (v) => setState(() => p3 = v),
+                        ),
+                        const SizedBox(height: 10),
+                        _driverDropdown(
+                          label: "Fastest lap driver",
+                          value: fl,
+                          drivers: drivers,
+                          excludedShortNames: const <String>{},
+                          onChanged: (v) => setState(() => fl = v),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: dnfController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(color: Colors.black87),
+                          decoration: const InputDecoration(labelText: "DNF count (optional)"),
+                        ),
+                      ],
                     ),
                   ),
                   actions: [
@@ -112,12 +102,23 @@ class PredictionDialog {
                     ),
                     FilledButton(
                       onPressed: () async {
-                        if (!formKey.currentState!.validate()) {
-                          return;
-                        }
                         if (p1 == null || p2 == null || p3 == null || fl == null) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
                             const SnackBar(content: Text("Please select all required drivers.")),
+                          );
+                          return;
+                        }
+                        final rawDnf = dnfController.text.trim();
+                        final parsedDnf = rawDnf.isEmpty ? null : int.tryParse(rawDnf);
+                        if (parsedDnf == null && rawDnf.isNotEmpty) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(content: Text("DNF must be a non-negative integer.")),
+                          );
+                          return;
+                        }
+                        if (parsedDnf != null && parsedDnf < 0) {
+                          ScaffoldMessenger.of(dialogContext).showSnackBar(
+                            const SnackBar(content: Text("DNF must be a non-negative integer.")),
                           );
                           return;
                         }
@@ -141,9 +142,7 @@ class PredictionDialog {
                                 p2: p2!,
                                 p3: p3!,
                                 fastestLap: fl!,
-                                dnfCount: dnfController.text.trim().isEmpty
-                                    ? null
-                                    : int.parse(dnfController.text.trim()),
+                                dnfCount: parsedDnf,
                               );
                           ref.invalidate(predictionForRaceProvider(race.id));
                           if (dialogContext.mounted) {
@@ -189,30 +188,34 @@ class PredictionDialog {
     return exists ? upper : null;
   }
 
-  static DropdownButtonFormField<String> _driverDropdown({
+  static DropdownMenu<String> _driverDropdown({
     required String label,
     required String? value,
     required List<F1Driver> drivers,
     required Set<String> excludedShortNames,
     required ValueChanged<String?> onChanged,
   }) {
-    final items = drivers
+    final entries = drivers
         .where((d) => d.shortName == value || !excludedShortNames.contains(d.shortName))
-        .map(
-          (d) => DropdownMenuItem<String>(
-            value: d.shortName,
-            child: Text(d.displayLabel),
-          ),
-        )
+        .map((d) => DropdownMenuEntry<String>(value: d.shortName, label: d.displayLabel))
         .toList();
 
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      decoration: InputDecoration(labelText: label),
-      items: items,
-      onChanged: onChanged,
-      validator: (v) => (v == null || v.isEmpty) ? "Required" : null,
-      isExpanded: true,
+    return DropdownMenu<String>(
+      width: 320,
+      label: Text(label),
+      hintText: "Type to filter (e.g. max)",
+      enableFilter: true,
+      enableSearch: true,
+      initialSelection: value,
+      filterCallback: (entries, filter) {
+        final query = filter.trim().toLowerCase();
+        if (query.isEmpty) {
+          return entries;
+        }
+        return entries.where((entry) => entry.label.toLowerCase().contains(query)).toList();
+      },
+      onSelected: onChanged,
+      dropdownMenuEntries: entries,
     );
   }
 }

@@ -33,6 +33,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return;
       }
       _startupPromptShown = true;
+      await Future<void>.delayed(const Duration(milliseconds: 900));
       await LocalNotificationService.showPredictionReminder();
     });
   }
