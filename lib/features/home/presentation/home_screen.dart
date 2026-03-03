@@ -14,9 +14,10 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
   int _index = 0;
   bool _startupPromptShown = false;
+  bool _resumePromptShown = false;
 
   static const _pages = <Widget>[
     LeaguesScreen(),
@@ -27,15 +28,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(profileControllerProvider.notifier).ensureCurrentUserDoc();
       if (_startupPromptShown) {
         return;
       }
       _startupPromptShown = true;
-      await Future<void>.delayed(const Duration(milliseconds: 900));
+      await Future<void>.delayed(const Duration(seconds: 2));
       await LocalNotificationService.showPredictionReminder();
     });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _resumePromptShown == true) {
+      return;
+    }
+    _resumePromptShown = true;
+    LocalNotificationService.showPredictionReminder();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 
   @override

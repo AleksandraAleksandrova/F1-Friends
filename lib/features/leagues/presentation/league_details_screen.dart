@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
 import "../../auth/providers/auth_providers.dart";
+import "../../../core/widgets/searchable_select_field.dart";
 import "../domain/league.dart";
 import "../../predictions/domain/prediction.dart";
 import "../../predictions/presentation/prediction_dialog.dart";
@@ -142,23 +143,14 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
     required List<F1Driver> drivers,
     required ValueChanged<String?> onSelected,
   }) {
-    return DropdownMenu<String>(
+    return SearchableSelectField(
       width: 320,
-      label: Text(label),
+      label: label,
       hintText: "Type to filter (e.g. max)",
-      enableFilter: true,
-      enableSearch: true,
-      initialSelection: value,
-      filterCallback: (entries, filter) {
-        final query = filter.trim().toLowerCase();
-        if (query.isEmpty) {
-          return entries;
-        }
-        return entries.where((entry) => entry.label.toLowerCase().contains(query)).toList();
-      },
-      onSelected: onSelected,
-      dropdownMenuEntries: drivers
-          .map((d) => DropdownMenuEntry<String>(value: d.shortName, label: d.displayLabel))
+      selectedValue: value,
+      onChanged: onSelected,
+      items: drivers
+          .map((d) => SearchableSelectItem(value: d.shortName, label: d.displayLabel))
           .toList(),
     );
   }
@@ -168,9 +160,58 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
     final league = widget.league;
     final membersAsync = ref.watch(leagueMembersProvider(league.id));
     final currentUid = ref.watch(authUserIdProvider).value;
+    final isAdmin = currentUid == league.adminUserId;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("League Details")),
+      appBar: AppBar(
+        title: const Text("League Details"),
+        actions: [
+          if (isAdmin)
+            IconButton(
+              tooltip: "Delete league",
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text("Delete League"),
+                    content: const Text("This will permanently remove the league and its members list."),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text("Cancel"),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text("Delete"),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirm != true) {
+                  return;
+                }
+                try {
+                  await ref.read(leaguesControllerProvider.notifier).deleteLeague(leagueId: league.id);
+                  if (!context.mounted) {
+                    return;
+                  }
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("League deleted.")),
+                  );
+                } catch (e) {
+                  if (!context.mounted) {
+                    return;
+                  }
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Failed to delete league: $e")),
+                  );
+                }
+              },
+            ),
+        ],
+      ),
       body: Builder(
         builder: (context) {
           final racesAsync = ref.watch(racesBySeasonProvider(league.seasonYear));
@@ -218,24 +259,15 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                     if (leagueRaces.isEmpty)
                       const Text("No races found in this league range.")
                     else
-                      DropdownMenu<String>(
+                      SearchableSelectField(
                         width: 360,
-                        label: const Text("Race"),
+                        label: "Race",
                         hintText: "Type race name or round",
-                        enableFilter: true,
-                        enableSearch: true,
-                        initialSelection: _selectedRaceId,
-                        filterCallback: (entries, filter) {
-                          final query = filter.trim().toLowerCase();
-                          if (query.isEmpty) {
-                            return entries;
-                          }
-                          return entries.where((entry) => entry.label.toLowerCase().contains(query)).toList();
-                        },
-                        onSelected: (value) => setState(() => _selectedRaceId = value),
-                        dropdownMenuEntries: leagueRaces
+                        selectedValue: _selectedRaceId,
+                        onChanged: (value) => setState(() => _selectedRaceId = value),
+                        items: leagueRaces
                             .map(
-                              (race) => DropdownMenuEntry<String>(
+                              (race) => SearchableSelectItem(
                                 value: race.id,
                                 label: "R${race.round} - ${race.raceName}",
                               ),

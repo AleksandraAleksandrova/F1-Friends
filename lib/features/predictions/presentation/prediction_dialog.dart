@@ -2,6 +2,7 @@ import "package:cloud_firestore/cloud_firestore.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 
+import "../../../core/widgets/searchable_select_field.dart";
 import "../../races/data/f1_api_service.dart";
 import "../../races/domain/race_weekend.dart";
 import "../../races/providers/races_providers.dart";
@@ -188,7 +189,7 @@ class PredictionDialog {
     return exists ? upper : null;
   }
 
-  static DropdownMenu<String> _driverDropdown({
+  static SearchableSelectField _driverDropdown({
     required String label,
     required String? value,
     required List<F1Driver> drivers,
@@ -197,25 +198,16 @@ class PredictionDialog {
   }) {
     final entries = drivers
         .where((d) => d.shortName == value || !excludedShortNames.contains(d.shortName))
-        .map((d) => DropdownMenuEntry<String>(value: d.shortName, label: d.displayLabel))
+        .map((d) => SearchableSelectItem(value: d.shortName, label: d.displayLabel))
         .toList();
 
-    return DropdownMenu<String>(
+    return SearchableSelectField(
       width: 320,
-      label: Text(label),
+      label: label,
       hintText: "Type to filter (e.g. max)",
-      enableFilter: true,
-      enableSearch: true,
-      initialSelection: value,
-      filterCallback: (entries, filter) {
-        final query = filter.trim().toLowerCase();
-        if (query.isEmpty) {
-          return entries;
-        }
-        return entries.where((entry) => entry.label.toLowerCase().contains(query)).toList();
-      },
-      onSelected: onChanged,
-      dropdownMenuEntries: entries,
+      selectedValue: value,
+      onChanged: onChanged,
+      items: entries,
     );
   }
 }

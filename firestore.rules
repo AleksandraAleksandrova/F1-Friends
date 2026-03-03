@@ -33,7 +33,7 @@ service cloud.firestore {
     match /leagueJoinCodes/{joinCode} {
       allow read: if signedIn();
       allow create: if signedIn();
-      allow update, delete: if false;
+      allow update, delete: if signedIn();
     }
 
     match /predictions/{predictionId} {

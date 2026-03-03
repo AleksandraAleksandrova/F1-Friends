@@ -84,6 +84,23 @@ class LeaguesController extends StateNotifier<AsyncValue<void>> {
     );
     return result.requireValue;
   }
+
+  Future<void> deleteLeague({required String leagueId}) async {
+    final userId = _ref.read(authUserIdProvider).value;
+    if (userId == null) {
+      throw StateError("User is not authenticated.");
+    }
+
+    state = const AsyncLoading();
+    final result = await AsyncValue.guard(() async {
+      await _leaguesService.deleteLeague(userId: userId, leagueId: leagueId);
+    });
+    state = result.when(
+      data: (_) => const AsyncData(null),
+      error: (error, stackTrace) => AsyncError(error, stackTrace),
+      loading: () => const AsyncLoading(),
+    );
+  }
 }
 
 final leaguesControllerProvider = StateNotifierProvider<LeaguesController, AsyncValue<void>>((ref) {

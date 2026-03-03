@@ -3,6 +3,7 @@ import "package:flutter_local_notifications/flutter_local_notifications.dart";
 
 class LocalNotificationService {
   static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  static const String _channelId = "prediction_reminders_v2";
   static bool _initialized = false;
 
   static Future<void> initialize() async {
@@ -19,6 +20,16 @@ class LocalNotificationService {
     await _plugin
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
+    await _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            _channelId,
+            "Prediction Reminders",
+            description: "Reminders to submit race predictions",
+            importance: Importance.high,
+          ),
+        );
 
     FirebaseMessaging.onMessage.listen((message) async {
       final title = message.notification?.title ?? "F1 Friends";
@@ -34,6 +45,21 @@ class LocalNotificationService {
       return;
     }
 
+    var enabled = await _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.areNotificationsEnabled();
+    if (enabled == false) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+      enabled = await _plugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.areNotificationsEnabled();
+    }
+    if (enabled == false) {
+      return;
+    }
+
     await _show(
       "F1 Friends",
       "Create a league and invite friends to predict next race!",
@@ -43,7 +69,7 @@ class LocalNotificationService {
   static Future<void> _show(String title, String body) async {
     const details = NotificationDetails(
       android: AndroidNotificationDetails(
-        "prediction_reminders",
+        _channelId,
         "Prediction Reminders",
         channelDescription: "Reminders to submit race predictions",
         importance: Importance.high,

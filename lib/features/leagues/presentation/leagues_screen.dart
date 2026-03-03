@@ -4,6 +4,7 @@ import "package:cloud_firestore/cloud_firestore.dart";
 
 import "league_details_screen.dart";
 import "../providers/leagues_providers.dart";
+import "../../races/providers/races_providers.dart";
 
 class LeaguesScreen extends ConsumerWidget {
   const LeaguesScreen({super.key});
@@ -132,11 +133,30 @@ class LeaguesScreen extends ConsumerWidget {
   }
 
   Future<void> _showCreateLeagueDialog(BuildContext context, WidgetRef ref) async {
+    final currentSeasonYear = DateTime.now().year;
+    var maxRound = 24;
+    var nextRound = 1;
+    try {
+      final seasonRaces = await ref.read(racesBySeasonProvider(currentSeasonYear).future);
+      if (seasonRaces.isNotEmpty) {
+        final sorted = [...seasonRaces]..sort((a, b) => a.round.compareTo(b.round));
+        maxRound = sorted.last.round;
+        final now = DateTime.now().toUtc();
+        final next = sorted.where((r) => r.startTimeUtc.isAfter(now)).toList();
+        nextRound = next.isNotEmpty ? next.first.round : sorted.last.round;
+      }
+    } catch (_) {
+      // Keep safe defaults when race API fetch fails.
+    }
+    if (!context.mounted) {
+      return;
+    }
+
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController();
-    final seasonController = TextEditingController(text: DateTime.now().year.toString());
-    final startRoundController = TextEditingController(text: "1");
-    final endRoundController = TextEditingController(text: "5");
+    final seasonController = TextEditingController(text: currentSeasonYear.toString());
+    final startRoundController = TextEditingController(text: "$nextRound");
+    final endRoundController = TextEditingController(text: "$maxRound");
 
     final submitted = await showDialog<bool>(
       context: context,
@@ -166,7 +186,16 @@ class LeaguesScreen extends ConsumerWidget {
                     controller: startRoundController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: "Start round"),
-                    validator: (value) => int.tryParse(value ?? "") == null ? "Invalid round" : null,
+                    validator: (value) {
+                      final start = int.tryParse(value ?? "");
+                      if (start == null || start < 1) {
+                        return "Start round must be positive";
+                      }
+                      if (start > maxRound) {
+                        return "Start round must be <= $maxRound";
+                      }
+                      return null;
+                    },
                   ),
                   TextFormField(
                     controller: endRoundController,
@@ -175,11 +204,14 @@ class LeaguesScreen extends ConsumerWidget {
                     validator: (value) {
                       final end = int.tryParse(value ?? "");
                       final start = int.tryParse(startRoundController.text);
-                      if (end == null) {
-                        return "Invalid round";
+                      if (end == null || end < 1) {
+                        return "End round must be positive";
                       }
-                      if (start != null && end <= start) {
-                        return "End round must be after start round";
+                      if (end > maxRound) {
+                        return "End round must be <= $maxRound";
+                      }
+                      if (start != null && end < start) {
+                        return "End round must be >= start round";
                       }
                       return null;
                     },
@@ -200,9 +232,15 @@ class LeaguesScreen extends ConsumerWidget {
                 }
                 final startRound = int.parse(startRoundController.text);
                 final endRound = int.parse(endRoundController.text);
-                if (startRound >= endRound) {
+                if (startRound < 1 || endRound < 1 || startRound > maxRound || endRound > maxRound) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("End round must be after start round.")),
+                    SnackBar(content: Text("Rounds must be in range 1..$maxRound.")),
+                  );
+                  return;
+                }
+                if (endRound < startRound) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("End round must be >= start round.")),
                   );
                   return;
                 }

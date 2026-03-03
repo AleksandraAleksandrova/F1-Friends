@@ -58,8 +58,8 @@ class FirestoreLeaguesService implements LeaguesService {
     required String userId,
     required CreateLeagueInput input,
   }) async {
-    if (input.startRound >= input.endRound) {
-      throw StateError("End round must be after start round.");
+    if (input.startRound > input.endRound) {
+      throw StateError("End round must be >= start round.");
     }
 
     final joinCode = await _generateUniqueJoinCode();
@@ -153,6 +153,47 @@ class FirestoreLeaguesService implements LeaguesService {
     });
 
     return result;
+  }
+
+  @override
+  Future<void> deleteLeague({
+    required String userId,
+    required String leagueId,
+  }) async {
+    final leagueRef = _firestore.doc(FirestorePaths.league(leagueId));
+    final leagueSnap = await leagueRef.get();
+    if (!leagueSnap.exists) {
+      return;
+    }
+    final data = leagueSnap.data()!;
+    final adminUserId = data["adminUserId"] as String?;
+    if (adminUserId != userId) {
+      throw StateError("Only league admin can delete this league.");
+    }
+    final joinCode = (data["joinCode"] as String?) ?? "";
+
+    final memberDocs = await leagueRef.collection("members").get();
+    final batch = _firestore.batch();
+    for (final memberDoc in memberDocs.docs) {
+      final memberUid = (memberDoc.data()["userId"] as String?) ?? memberDoc.id;
+      if (memberUid.isNotEmpty) {
+        batch.set(
+          _firestore.doc(FirestorePaths.user(memberUid)),
+          {
+            "joinedLeagueIds": FieldValue.arrayRemove([leagueId]),
+            "updatedAt": FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        );
+      }
+      batch.delete(memberDoc.reference);
+    }
+
+    if (joinCode.isNotEmpty) {
+      batch.delete(_firestore.doc(FirestorePaths.leagueJoinCode(joinCode)));
+    }
+    batch.delete(leagueRef);
+    await batch.commit();
   }
 
   Future<String> _generateUniqueJoinCode() async {

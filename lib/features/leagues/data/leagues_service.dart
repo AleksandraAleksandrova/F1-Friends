@@ -67,4 +67,9 @@ abstract class LeaguesService {
     required String userId,
     required String joinCode,
   });
+
+  Future<void> deleteLeague({
+    required String userId,
+    required String leagueId,
+  });
 }
