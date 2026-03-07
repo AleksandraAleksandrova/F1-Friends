@@ -63,58 +63,59 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ? appUser!.username.trim()
                 : fallbackName;
 
-            return ListView(
-              children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
+            final topCard = Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Stack(
+                      alignment: Alignment.bottomRight,
                       children: [
-                        Stack(
-                          alignment: Alignment.bottomRight,
-                          children: [
-                            CircleAvatar(
-                              radius: 44,
-                              backgroundImage: (appUser?.profileImageUrl?.isNotEmpty ?? false)
-                                  ? NetworkImage(appUser!.profileImageUrl!)
-                                  : null,
-                              child: (appUser?.profileImageUrl?.isNotEmpty ?? false)
-                                  ? null
-                                  : const Icon(Icons.person, size: 44),
+                        CircleAvatar(
+                          radius: 44,
+                          backgroundImage: (appUser?.profileImageUrl?.isNotEmpty ?? false)
+                              ? NetworkImage(appUser!.profileImageUrl!)
+                              : null,
+                          child: (appUser?.profileImageUrl?.isNotEmpty ?? false)
+                              ? null
+                              : const Icon(Icons.person, size: 44),
+                        ),
+                        PopupMenuButton<ImageSource>(
+                          enabled: !profileState.isLoading,
+                          tooltip: "Change photo",
+                          onSelected: (source) =>
+                              ref.read(profileControllerProvider.notifier).updateProfileImage(source),
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: ImageSource.gallery,
+                              child: Text("Choose from gallery"),
                             ),
-                            PopupMenuButton<ImageSource>(
-                              enabled: !profileState.isLoading,
-                              tooltip: "Change photo",
-                              onSelected: (source) => ref
-                                  .read(profileControllerProvider.notifier)
-                                  .updateProfileImage(source),
-                              itemBuilder: (context) => const [
-                                PopupMenuItem(
-                                  value: ImageSource.gallery,
-                                  child: Text("Choose from gallery"),
-                                ),
-                                PopupMenuItem(
-                                  value: ImageSource.camera,
-                                  child: Text("Take photo"),
-                                ),
-                              ],
-                              child: const CircleAvatar(
-                                radius: 16,
-                                child: Icon(Icons.camera_alt, size: 16),
-                              ),
+                            PopupMenuItem(
+                              value: ImageSource.camera,
+                              child: Text("Take photo"),
                             ),
                           ],
+                          child: const CircleAvatar(
+                            radius: 16,
+                            child: Icon(Icons.camera_alt, size: 16),
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        if (!_editingUsername)
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    if (!_editingUsername)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Row(
                             children: [
-                              Expanded(
-                                child: Text(
-                                  currentName,
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
+                              Text(
+                                "Username",
+                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
                               ),
+                              const Spacer(),
                               IconButton(
                                 onPressed: profileState.isLoading
                                     ? null
@@ -131,57 +132,91 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                                 tooltip: "Edit username",
                               ),
                             ],
-                          )
-                        else ...[
-                          TextField(
-                            controller: _usernameController,
-                            decoration: const InputDecoration(
-                              labelText: "Username",
-                              helperText: "At least 3 characters",
-                            ),
                           ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: profileState.isLoading
-                                      ? null
-                                      : () => setState(() => _editingUsername = false),
-                                  child: const Text("Cancel"),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: FilledButton(
-                                  onPressed: profileState.isLoading
-                                      ? null
-                                      : () async {
-                                          await ref
-                                              .read(profileControllerProvider.notifier)
-                                              .updateUsername(_usernameController.text);
-                                          if (!mounted) {
-                                            return;
-                                          }
-                                          setState(() => _editingUsername = false);
-                                        },
-                                  child: const Text("Save"),
-                                ),
-                              ),
-                            ],
+                          Text(
+                            currentName,
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
                         ],
-                      ],
+                      )
+                    else ...[
+                      TextField(
+                        controller: _usernameController,
+                        decoration: const InputDecoration(
+                          labelText: "Username",
+                          helperText: "At least 3 characters",
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: profileState.isLoading
+                                  ? null
+                                  : () => setState(() => _editingUsername = false),
+                              child: const Text("Cancel"),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: profileState.isLoading
+                                  ? null
+                                  : () async {
+                                      await ref
+                                          .read(profileControllerProvider.notifier)
+                                          .updateUsername(_usernameController.text);
+                                      if (!mounted) {
+                                        return;
+                                      }
+                                      setState(() => _editingUsername = false);
+                                    },
+                              child: const Text("Save"),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Email",
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            user?.email ?? "unknown",
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                Text("Email: ${user?.email ?? "unknown"}"),
-                const SizedBox(height: 12),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: statsAsync.when(
+              ),
+            );
+
+            final statsCard = Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "My Overview",
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    statsAsync.when(
                       loading: () => const Text("Loading stats..."),
                       error: (e, _) => Text("Stats unavailable: $e"),
                       data: (stats) => Column(
@@ -196,8 +231,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ],
                       ),
                     ),
-                  ),
+                  ],
                 ),
+              ),
+            );
+
+            return ListView(
+              children: [
+                topCard,
+                const SizedBox(height: 20),
+                statsCard,
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: authState.isLoading

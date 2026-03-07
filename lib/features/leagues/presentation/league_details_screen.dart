@@ -259,56 +259,61 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                     if (leagueRaces.isEmpty)
                       const Text("No races found in this league range.")
                     else
-                      SearchableSelectField(
-                        width: 360,
-                        label: "Race",
-                        hintText: "Type race name or round",
-                        selectedValue: _selectedRaceId,
-                        onChanged: (value) => setState(() => _selectedRaceId = value),
+                      DropdownButtonFormField<String>(
+                        initialValue: _selectedRaceId,
+                        decoration: const InputDecoration(labelText: "Race"),
+                        isExpanded: true,
                         items: leagueRaces
                             .map(
-                              (race) => SearchableSelectItem(
+                              (race) => DropdownMenuItem<String>(
                                 value: race.id,
-                                label: "R${race.round} - ${race.raceName}",
+                                child: Text("R${race.round} - ${race.raceName}"),
                               ),
                             )
                             .toList(),
+                        onChanged: (value) => setState(() => _selectedRaceId = value),
                       ),
                     const SizedBox(height: 12),
                     if (selectedRace != null) ...[
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            "Predictions for R${selectedRace.round}",
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          FilledButton.tonal(
-                            onPressed: () async {
-                              final saved = await PredictionDialog.show(
-                                context: context,
-                                ref: ref,
-                                race: selectedRace,
-                              );
-                              if (!mounted) {
-                                return;
-                              }
-                              if (saved) {
-                                ref.invalidate(predictionsForRaceProvider(selectedRace.id));
-                                ref.invalidate(predictionForRaceProvider(selectedRace.id));
-                                if (!context.mounted) {
-                                  return;
-                                }
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Prediction updated.")),
-                                );
-                              }
-                            },
-                            child: const Text("Edit Mine"),
-                          ),
-                        ],
+                      Builder(
+                        builder: (context) {
+                          final isLocked =
+                              !DateTime.now().toUtc().isBefore(PredictionDialog.lockAtUtc(selectedRace));
+                          return Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  "Predictions for R${selectedRace.round}",
+                                  style: Theme.of(context).textTheme.titleMedium,
+                                ),
+                              ),
+                              if (!isLocked)
+                                FilledButton.tonal(
+                                  onPressed: () async {
+                                    final saved = await PredictionDialog.show(
+                                      context: context,
+                                      ref: ref,
+                                      race: selectedRace,
+                                    );
+                                    if (!mounted) {
+                                      return;
+                                    }
+                                    if (saved) {
+                                      ref.invalidate(predictionsForRaceProvider(selectedRace.id));
+                                      ref.invalidate(predictionForRaceProvider(selectedRace.id));
+                                      if (!context.mounted) {
+                                        return;
+                                      }
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("Prediction updated.")),
+                                      );
+                                    }
+                                  },
+                                  child: const Text("Edit Mine"),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 8),
                       Expanded(
@@ -388,74 +393,77 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                       Card(
                         child: Padding(
                           padding: const EdgeInsets.all(10),
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              FilledButton(
-                                onPressed: () async {
-                                  try {
-                                    final drivers = await ref.read(currentDriversProvider.future);
-                                    if (!mounted) {
-                                      return;
+                          child: Center(
+                            child: Wrap(
+                              alignment: WrapAlignment.center,
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                FilledButton(
+                                  onPressed: () async {
+                                    try {
+                                      final drivers = await ref.read(currentDriversProvider.future);
+                                      if (!mounted) {
+                                        return;
+                                      }
+                                      final mockResult = await _showMockResultDialog(this.context, drivers);
+                                      if (mockResult == null) {
+                                        return;
+                                      }
+                                      await ref.read(mockScoringServiceProvider).applyMockResult(
+                                            league: league,
+                                            raceId: selectedRace.id,
+                                            result: mockResult,
+                                          );
+                                      ref.invalidate(leagueMembersProvider(league.id));
+                                      if (!mounted) {
+                                        return;
+                                      }
+                                      ScaffoldMessenger.of(this.context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Mock scoring applied. Leaderboard updated."),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      if (!mounted) {
+                                        return;
+                                      }
+                                      ScaffoldMessenger.of(this.context).showSnackBar(
+                                        SnackBar(content: Text("Failed to apply mock result: $e")),
+                                      );
                                     }
-                                    final mockResult = await _showMockResultDialog(this.context, drivers);
-                                    if (mockResult == null) {
-                                      return;
+                                  },
+                                  child: const Text("Apply Mock Result"),
+                                ),
+                                OutlinedButton(
+                                  onPressed: () async {
+                                    try {
+                                      await ref.read(mockScoringServiceProvider).revertMockResult(
+                                            league: league,
+                                            raceId: selectedRace.id,
+                                          );
+                                      ref.invalidate(leagueMembersProvider(league.id));
+                                      if (!mounted) {
+                                        return;
+                                      }
+                                      ScaffoldMessenger.of(this.context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Mock points reverted for this race."),
+                                        ),
+                                      );
+                                    } catch (e) {
+                                      if (!mounted) {
+                                        return;
+                                      }
+                                      ScaffoldMessenger.of(this.context).showSnackBar(
+                                        SnackBar(content: Text("Failed to revert mock points: $e")),
+                                      );
                                     }
-                                    await ref.read(mockScoringServiceProvider).applyMockResult(
-                                          league: league,
-                                          raceId: selectedRace.id,
-                                          result: mockResult,
-                                        );
-                                    ref.invalidate(leagueMembersProvider(league.id));
-                                    if (!mounted) {
-                                      return;
-                                    }
-                                    ScaffoldMessenger.of(this.context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text("Mock scoring applied. Leaderboard updated."),
-                                      ),
-                                    );
-                                  } catch (e) {
-                                    if (!mounted) {
-                                      return;
-                                    }
-                                    ScaffoldMessenger.of(this.context).showSnackBar(
-                                      SnackBar(content: Text("Failed to apply mock result: $e")),
-                                    );
-                                  }
-                                },
-                                child: const Text("Apply Mock Result"),
-                              ),
-                              OutlinedButton(
-                                onPressed: () async {
-                                  try {
-                                    await ref.read(mockScoringServiceProvider).revertMockResult(
-                                          league: league,
-                                          raceId: selectedRace.id,
-                                        );
-                                    ref.invalidate(leagueMembersProvider(league.id));
-                                    if (!mounted) {
-                                      return;
-                                    }
-                                    ScaffoldMessenger.of(this.context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text("Mock points reverted for this race."),
-                                      ),
-                                    );
-                                  } catch (e) {
-                                    if (!mounted) {
-                                      return;
-                                    }
-                                    ScaffoldMessenger.of(this.context).showSnackBar(
-                                      SnackBar(content: Text("Failed to revert mock points: $e")),
-                                    );
-                                  }
-                                },
-                                child: const Text("Revert Mock Points"),
-                              ),
-                            ],
+                                  },
+                                  child: const Text("Revert Mock Points"),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

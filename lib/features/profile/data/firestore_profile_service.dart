@@ -37,17 +37,47 @@ class FirestoreProfileService implements ProfileService {
     final ref = _firestore.doc(FirestorePaths.user(uid));
     final snapshot = await ref.get();
     if (snapshot.exists) {
+      final data = snapshot.data()!;
+      final existingEmail = (data["email"] as String?)?.trim();
+      final existingUsername = (data["username"] as String?)?.trim();
+      final safeEmail = (existingEmail?.isNotEmpty ?? false) ? existingEmail! : email;
+      final safeUsername = (existingUsername?.isNotEmpty ?? false)
+          ? existingUsername!
+          : safeEmail.split("@").first;
+      final lower = safeUsername.toLowerCase();
+
+      await ref.set({
+        "email": safeEmail,
+        "username": safeUsername,
+        "usernameLower": lower,
+        "displayName": safeUsername,
+        "updatedAt": FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      await _firestore.doc(FirestorePaths.usernameIndex(lower)).set({
+        "uid": uid,
+        "email": safeEmail,
+        "username": safeUsername,
+        "updatedAt": FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
       return;
     }
 
     final username = email.split("@").first;
+    final lower = username.toLowerCase();
     await ref.set({
       "email": email,
       "username": username,
+      "usernameLower": lower,
       "displayName": username,
       "profileImageUrl": null,
       "joinedLeagueIds": <String>[],
       "createdAt": FieldValue.serverTimestamp(),
+      "updatedAt": FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+    await _firestore.doc(FirestorePaths.usernameIndex(lower)).set({
+      "uid": uid,
+      "email": email,
+      "username": username,
       "updatedAt": FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }
@@ -61,9 +91,26 @@ class FirestoreProfileService implements ProfileService {
     if (trimmed.length < 3) {
       throw StateError("Username must be at least 3 characters.");
     }
-    await _firestore.doc(FirestorePaths.user(uid)).set({
+    final userRef = _firestore.doc(FirestorePaths.user(uid));
+    final userSnap = await userRef.get();
+    final oldLower = (userSnap.data()?["usernameLower"] as String?)?.trim().toLowerCase();
+    final email = (userSnap.data()?["email"] as String?)?.trim();
+    final newLower = trimmed.toLowerCase();
+
+    await userRef.set({
       "username": trimmed,
+      "usernameLower": newLower,
       "displayName": trimmed,
+      "updatedAt": FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    if (oldLower != null && oldLower.isNotEmpty && oldLower != newLower) {
+      await _firestore.doc(FirestorePaths.usernameIndex(oldLower)).delete();
+    }
+    await _firestore.doc(FirestorePaths.usernameIndex(newLower)).set({
+      "uid": uid,
+      "email": email,
+      "username": trimmed,
       "updatedAt": FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

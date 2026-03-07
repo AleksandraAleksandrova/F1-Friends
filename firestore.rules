@@ -11,9 +11,14 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      // Authenticated users can read usernames/profile metadata for league views.
-      allow read: if signedIn();
+      // Public read needed for username -> email lookup at login.
+      allow read: if true;
       allow create, update, delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /usernames/{usernameLower} {
+      allow read: if true;
+      allow create, update, delete: if signedIn();
     }
  
     match /leagues/{leagueId} {

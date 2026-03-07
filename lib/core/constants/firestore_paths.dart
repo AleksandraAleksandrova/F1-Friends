@@ -1,5 +1,6 @@
 class FirestorePaths {
   static const users = "users";
+  static const usernames = "usernames";
   static const leagues = "leagues";
   static const leagueJoinCodes = "leagueJoinCodes";
   static const races = "races";
@@ -10,6 +11,7 @@ class FirestorePaths {
   static const jobs = "jobs";
 
   static String user(String uid) => "$users/$uid";
+  static String usernameIndex(String usernameLower) => "$usernames/$usernameLower";
   static String league(String leagueId) => "$leagues/$leagueId";
   static String leagueJoinCode(String joinCode) => "$leagueJoinCodes/$joinCode";
   static String race(String raceId) => "$races/$raceId";

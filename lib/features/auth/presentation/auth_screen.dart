@@ -14,14 +14,18 @@ class AuthScreen extends ConsumerStatefulWidget {
 
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _identifierController = TextEditingController();
+  final _registerEmailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoginMode = true;
   String? _authError;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _identifierController.dispose();
+    _registerEmailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -32,14 +36,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
     setState(() => _authError = null);
 
-    final email = _emailController.text.trim();
+    final identifier = _isLoginMode
+        ? _identifierController.text.trim()
+        : _registerEmailController.text.trim();
     final password = _passwordController.text;
     final controller = ref.read(authControllerProvider.notifier);
 
     if (_isLoginMode) {
-      await controller.signIn(email: email, password: password);
+      await controller.signIn(identifier: identifier, password: password);
     } else {
-      await controller.register(email: email, password: password);
+      await controller.register(
+        email: identifier,
+        password: password,
+        username: _usernameController.text.trim(),
+      );
     }
   }
 
@@ -62,6 +72,15 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           return "Authentication failed. Please try again.";
       }
     }
+    if (error is FirebaseException) {
+      if (error.code == "permission-denied") {
+        return "Login by username is not available until Firestore rules are published.";
+      }
+      return "Authentication failed. Please try again.";
+    }
+    if (error is StateError) {
+      return error.message;
+    }
     return "Unexpected error. Please try again.";
   }
 
@@ -74,8 +93,18 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     return RegExp(pattern).hasMatch(email);
   }
 
+  bool _isValidUsername(String v) {
+    final username = v.trim();
+    if (username.length < 3) {
+      return false;
+    }
+    return RegExp(r"^[A-Za-z0-9_]+$").hasMatch(username);
+  }
+
   Future<void> _showResetPasswordDialog() async {
-    final emailController = TextEditingController(text: _emailController.text.trim());
+    final emailController = TextEditingController(
+      text: _isLoginMode ? _identifierController.text.trim() : _registerEmailController.text.trim(),
+    );
     final formKey = GlobalKey<FormState>();
 
     final submitted = await showDialog<bool>(
@@ -202,18 +231,44 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               ),
                             ],
                             const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(labelText: "Email"),
-                              validator: (value) {
-                                final v = value ?? "";
-                                if (!_isValidEmail(v)) {
-                                  return "Enter a valid email";
-                                }
-                                return null;
-                              },
-                            ),
+                            if (_isLoginMode)
+                              TextFormField(
+                                controller: _identifierController,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: const InputDecoration(labelText: "Email or Username"),
+                                validator: (value) {
+                                  final v = value?.trim() ?? "";
+                                  if (v.length < 3) {
+                                    return "Enter email or username";
+                                  }
+                                  return null;
+                                },
+                              )
+                            else ...[
+                              TextFormField(
+                                controller: _usernameController,
+                                decoration: const InputDecoration(labelText: "Username"),
+                                validator: (value) {
+                                  if (!_isValidUsername(value ?? "")) {
+                                    return "Username: 3+ chars, letters/numbers/_ only";
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _registerEmailController,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: const InputDecoration(labelText: "Email"),
+                                validator: (value) {
+                                  final v = value ?? "";
+                                  if (!_isValidEmail(v)) {
+                                    return "Enter a valid email";
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ],
                             const SizedBox(height: 12),
                             TextFormField(
                               controller: _passwordController,

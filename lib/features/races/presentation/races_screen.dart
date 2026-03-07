@@ -75,7 +75,44 @@ class RacesScreen extends ConsumerWidget {
   }
 
   static String formatUtc(DateTime dt) {
-    return "${dt.toIso8601String().replaceFirst(".000", "")} UTC";
+    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
+    final local = dt.toLocal();
+    final weekday = weekdays[local.weekday - 1];
+    final month = months[local.month - 1];
+    final hh = local.hour.toString().padLeft(2, "0");
+    final mm = local.minute.toString().padLeft(2, "0");
+    return "$weekday, ${local.day} $month at $hh:$mm";
+  }
+
+  static String formatUtcAround(DateTime dt) {
+    final rounded = _roundUpToFive(dt.toLocal());
+    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const months = [
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    ];
+    final weekday = weekdays[rounded.weekday - 1];
+    final month = months[rounded.month - 1];
+    final hh = rounded.hour.toString().padLeft(2, "0");
+    final mm = rounded.minute.toString().padLeft(2, "0");
+    return "$weekday, ${rounded.day} $month around $hh:$mm";
+  }
+
+  static DateTime _roundUpToFive(DateTime dt) {
+    final minute = dt.minute;
+    final remainder = minute % 5;
+    final roundedMinute = remainder == 0 ? minute : minute + (5 - remainder);
+    final carryHour = roundedMinute >= 60 ? 1 : 0;
+    final safeMinute = roundedMinute % 60;
+    return DateTime(
+      dt.year,
+      dt.month,
+      dt.day,
+      dt.hour + carryHour,
+      safeMinute,
+    );
   }
 }
 
@@ -88,9 +125,6 @@ class _RacePredictionRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lockAt = PredictionDialog.lockAtUtc(race);
     final isLocked = !DateTime.now().toUtc().isBefore(lockAt);
-    final lockSource = race.qualifyingStartUtc != null
-        ? "qualy end (estimated)"
-        : "race start";
     final existingPredictionAsync = ref.watch(predictionForRaceProvider(race.id));
 
     final buttonLabel = isLocked
@@ -110,7 +144,7 @@ class _RacePredictionRow extends ConsumerWidget {
       title: Text(race.raceName),
       subtitle: Text(
         "${RacesScreen.formatUtc(race.startTimeUtc)}\n"
-        "Lock: ${RacesScreen.formatUtc(lockAt)} ($lockSource)",
+        "Lock: ${RacesScreen.formatUtc(lockAt)}",
       ),
       isThreeLine: true,
       trailing: OutlinedButton(
@@ -182,7 +216,7 @@ class _RaceTile extends StatelessWidget {
         Text("Round ${race.round}, Season ${race.seasonYear}"),
         const SizedBox(height: 4),
         Text("Race start: ${RacesScreen.formatUtc(race.startTimeUtc)}"),
-        Text("Expected end: ${RacesScreen.formatUtc(race.expectedEndTimeUtc)}"),
+        Text("Expected end: ${RacesScreen.formatUtcAround(race.expectedEndTimeUtc)}"),
         if (race.qualifyingStartUtc != null)
           Text("Qualy start: ${RacesScreen.formatUtc(race.qualifyingStartUtc!)}"),
       ],
@@ -208,9 +242,20 @@ class _LatestResultsView extends StatelessWidget {
           return Text("${entry.position}. ${entry.shortName}  ${entry.fullName}");
         }),
         const SizedBox(height: 8),
-        Text("Fastest lap driverId: ${summary.fastestLapDriverId ?? "n/a"}"),
+        Text("Fastest lap: ${_driverLabel(summary.fastestLapDriverId)}"),
         Text("DNFs: ${summary.dnfCount ?? 0}"),
       ],
     );
+  }
+
+  String _driverLabel(String? id) {
+    if (id == null || id.isEmpty) {
+      return "n/a";
+    }
+    final pretty = id
+        .split("_")
+        .map((p) => p.isEmpty ? p : "${p[0].toUpperCase()}${p.substring(1)}")
+        .join(" ");
+    return pretty;
   }
 }
