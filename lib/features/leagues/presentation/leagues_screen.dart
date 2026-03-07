@@ -176,12 +176,14 @@ class LeaguesScreen extends ConsumerWidget {
                         ? "Enter at least 3 characters"
                         : null,
                   ),
+                  const SizedBox(height: 10),
                   TextFormField(
                     controller: seasonController,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(labelText: "Season year"),
                     validator: (value) => int.tryParse(value ?? "") == null ? "Invalid year" : null,
                   ),
+                  const SizedBox(height: 10),
                   TextFormField(
                     controller: startRoundController,
                     keyboardType: TextInputType.number,
@@ -197,6 +199,7 @@ class LeaguesScreen extends ConsumerWidget {
                       return null;
                     },
                   ),
+                  const SizedBox(height: 10),
                   TextFormField(
                     controller: endRoundController,
                     keyboardType: TextInputType.number,

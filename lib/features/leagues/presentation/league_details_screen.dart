@@ -308,69 +308,6 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                             },
                             child: const Text("Edit Mine"),
                           ),
-                          FilledButton(
-                              onPressed: () async {
-                                try {
-                                  final drivers = await ref.read(currentDriversProvider.future);
-                                  if (!mounted) {
-                                    return;
-                                  }
-                                  final mockResult = await _showMockResultDialog(this.context, drivers);
-                                  if (mockResult == null) {
-                                    return;
-                                  }
-                                  await ref.read(mockScoringServiceProvider).applyMockResult(
-                                        league: league,
-                                        raceId: selectedRace.id,
-                                        result: mockResult,
-                                      );
-                                  ref.invalidate(leagueMembersProvider(league.id));
-                                  if (!mounted) {
-                                    return;
-                                  }
-                                  ScaffoldMessenger.of(this.context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Mock scoring applied. Leaderboard updated."),
-                                    ),
-                                  );
-                                } catch (e) {
-                                  if (!mounted) {
-                                    return;
-                                  }
-                                  ScaffoldMessenger.of(this.context).showSnackBar(
-                                    SnackBar(content: Text("Failed to apply mock result: $e")),
-                                  );
-                                }
-                              },
-                              child: const Text("Apply Mock Result"),
-                            ),
-                          OutlinedButton(
-                              onPressed: () async {
-                                try {
-                                  await ref.read(mockScoringServiceProvider).revertMockResult(
-                                        league: league,
-                                        raceId: selectedRace.id,
-                                      );
-                                  ref.invalidate(leagueMembersProvider(league.id));
-                                  if (!mounted) {
-                                    return;
-                                  }
-                                  ScaffoldMessenger.of(this.context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Mock points reverted for this race."),
-                                    ),
-                                  );
-                                } catch (e) {
-                                  if (!mounted) {
-                                    return;
-                                  }
-                                  ScaffoldMessenger.of(this.context).showSnackBar(
-                                    SnackBar(content: Text("Failed to revert mock points: $e")),
-                                  );
-                                }
-                              },
-                              child: const Text("Revert Mock Points"),
-                            ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -445,6 +382,81 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                               },
                             );
                           },
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              FilledButton(
+                                onPressed: () async {
+                                  try {
+                                    final drivers = await ref.read(currentDriversProvider.future);
+                                    if (!mounted) {
+                                      return;
+                                    }
+                                    final mockResult = await _showMockResultDialog(this.context, drivers);
+                                    if (mockResult == null) {
+                                      return;
+                                    }
+                                    await ref.read(mockScoringServiceProvider).applyMockResult(
+                                          league: league,
+                                          raceId: selectedRace.id,
+                                          result: mockResult,
+                                        );
+                                    ref.invalidate(leagueMembersProvider(league.id));
+                                    if (!mounted) {
+                                      return;
+                                    }
+                                    ScaffoldMessenger.of(this.context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Mock scoring applied. Leaderboard updated."),
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    if (!mounted) {
+                                      return;
+                                    }
+                                    ScaffoldMessenger.of(this.context).showSnackBar(
+                                      SnackBar(content: Text("Failed to apply mock result: $e")),
+                                    );
+                                  }
+                                },
+                                child: const Text("Apply Mock Result"),
+                              ),
+                              OutlinedButton(
+                                onPressed: () async {
+                                  try {
+                                    await ref.read(mockScoringServiceProvider).revertMockResult(
+                                          league: league,
+                                          raceId: selectedRace.id,
+                                        );
+                                    ref.invalidate(leagueMembersProvider(league.id));
+                                    if (!mounted) {
+                                      return;
+                                    }
+                                    ScaffoldMessenger.of(this.context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text("Mock points reverted for this race."),
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    if (!mounted) {
+                                      return;
+                                    }
+                                    ScaffoldMessenger.of(this.context).showSnackBar(
+                                      SnackBar(content: Text("Failed to revert mock points: $e")),
+                                    );
+                                  }
+                                },
+                                child: const Text("Revert Mock Points"),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],

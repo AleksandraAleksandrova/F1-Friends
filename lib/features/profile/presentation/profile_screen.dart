@@ -29,6 +29,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final authState = ref.watch(authControllerProvider);
     final profileState = ref.watch(profileControllerProvider);
     final appUserAsync = ref.watch(currentAppUserProvider);
+    final statsAsync = ref.watch(profileStatsProvider);
     final user = FirebaseAuth.instance.currentUser;
 
     ref.listen<AsyncValue<void>>(profileControllerProvider, (previous, next) {
@@ -176,6 +177,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text("Email: ${user?.email ?? "unknown"}"),
+                const SizedBox(height: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: statsAsync.when(
+                      loading: () => const Text("Loading stats..."),
+                      error: (e, _) => Text("Stats unavailable: $e"),
+                      data: (stats) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Joined leagues: ${stats.joinedLeaguesCount}"),
+                          Text("Created leagues: ${stats.createdLeaguesCount}"),
+                          Text(
+                            "Best leaderboard place: "
+                            "${stats.bestLeaderboardPlace == null ? "N/A" : "#${stats.bestLeaderboardPlace}"}",
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: authState.isLoading

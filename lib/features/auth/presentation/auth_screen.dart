@@ -17,6 +17,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoginMode = true;
+  String? _authError;
 
   @override
   void dispose() {
@@ -29,6 +30,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     if (!_formKey.currentState!.validate()) {
       return;
     }
+    setState(() => _authError = null);
 
     final email = _emailController.text.trim();
     final password = _passwordController.text;
@@ -43,9 +45,90 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   String _humanizeError(Object error) {
     if (error is FirebaseAuthException) {
-      return error.message ?? "Authentication failed.";
+      switch (error.code) {
+        case "invalid-credential":
+        case "wrong-password":
+        case "user-not-found":
+          return "Invalid credentials. Please check your email and password.";
+        case "email-already-in-use":
+          return "This email is already registered.";
+        case "too-many-requests":
+          return "Too many attempts. Please wait and try again.";
+        case "network-request-failed":
+          return "Network error. Check your connection and try again.";
+        case "invalid-email":
+          return "Invalid email address.";
+        default:
+          return "Authentication failed. Please try again.";
+      }
     }
     return "Unexpected error. Please try again.";
+  }
+
+  bool _isValidEmail(String v) {
+    final email = v.trim();
+    if (email.length < 3) {
+      return false;
+    }
+    const pattern = r"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+    return RegExp(pattern).hasMatch(email);
+  }
+
+  Future<void> _showResetPasswordDialog() async {
+    final emailController = TextEditingController(text: _emailController.text.trim());
+    final formKey = GlobalKey<FormState>();
+
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Reset Password"),
+        content: Form(
+          key: formKey,
+          child: TextFormField(
+            controller: emailController,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: "Account email"),
+            validator: (value) => _isValidEmail(value ?? "") ? null : "Enter a valid email",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("Cancel"),
+          ),
+          FilledButton(
+            onPressed: () async {
+              if (!formKey.currentState!.validate()) {
+                return;
+              }
+              try {
+                await ref.read(authControllerProvider.notifier).sendPasswordResetEmail(
+                      email: emailController.text.trim(),
+                    );
+                if (!context.mounted) {
+                  return;
+                }
+                Navigator.of(context).pop(true);
+              } catch (error) {
+                if (!context.mounted) {
+                  return;
+                }
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(_humanizeError(error))),
+                );
+              }
+            },
+            child: const Text("Send Link"),
+          ),
+        ],
+      ),
+    );
+
+    if (submitted == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Password reset link sent to email.")),
+      );
+    }
   }
 
   @override
@@ -55,11 +138,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     ref.listen<AsyncValue<void>>(authControllerProvider, (previous, next) {
       next.whenOrNull(
-        error: (error, _) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(_humanizeError(error))),
-          );
-        },
+        error: (error, _) => setState(() => _authError = _humanizeError(error)),
       );
     });
 
@@ -105,14 +184,31 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               _isLoginMode ? "Sign In" : "Create Account",
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
+                            if (_authError != null) ...[
+                              const SizedBox(height: 12),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.errorContainer,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  _authError!,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onErrorContainer,
+                                  ),
+                                ),
+                              ),
+                            ],
                             const SizedBox(height: 16),
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
                               decoration: const InputDecoration(labelText: "Email"),
                               validator: (value) {
-                                final v = value?.trim() ?? "";
-                                if (v.isEmpty || !v.contains("@")) {
+                                final v = value ?? "";
+                                if (!_isValidEmail(v)) {
                                   return "Enter a valid email";
                                 }
                                 return null;
@@ -128,6 +224,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 if (v.length < 6) {
                                   return "Password must be at least 6 characters";
                                 }
+                                if (!_isLoginMode &&
+                                    (!RegExp(r"[A-Za-z]").hasMatch(v) ||
+                                        !RegExp(r"\d").hasMatch(v))) {
+                                  return "Password must include at least one letter and one number";
+                                }
                                 return null;
                               },
                             ),
@@ -139,12 +240,21 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 child: Text(_isLoginMode ? "Sign In" : "Register"),
                               ),
                             ),
+                            if (_isLoginMode)
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: authState.isLoading ? null : _showResetPasswordDialog,
+                                  child: const Text("Forgot password?"),
+                                ),
+                              ),
                             const SizedBox(height: 8),
                             TextButton(
                               onPressed: authState.isLoading
                                   ? null
                                   : () => setState(() {
                                         _isLoginMode = !_isLoginMode;
+                                        _authError = null;
                                       }),
                               child: Text(
                                 _isLoginMode

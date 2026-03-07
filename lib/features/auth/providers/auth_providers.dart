@@ -41,6 +41,13 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
     state = const AsyncLoading();
     state = await AsyncValue.guard(_authService.signOut);
   }
+
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => _authService.sendPasswordResetEmail(email: email),
+    );
+  }
 }
 
 final authControllerProvider =

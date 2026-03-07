@@ -5,6 +5,8 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:image_picker/image_picker.dart";
 
 import "../../auth/providers/auth_providers.dart";
+import "../../../core/constants/firestore_paths.dart";
+import "../../leagues/providers/leagues_providers.dart";
 import "../data/firestore_profile_service.dart";
 import "../data/profile_service.dart";
 import "../domain/app_user.dart";
@@ -35,6 +37,72 @@ final currentAppUserProvider = StreamProvider<AppUser?>((ref) {
     return Stream.value(null);
   }
   return ref.watch(profileServiceProvider).watchUser(uid);
+});
+
+class ProfileStats {
+  const ProfileStats({
+    required this.joinedLeaguesCount,
+    required this.createdLeaguesCount,
+    required this.bestLeaderboardPlace,
+  });
+
+  final int joinedLeaguesCount;
+  final int createdLeaguesCount;
+  final int? bestLeaderboardPlace;
+}
+
+final profileStatsProvider = FutureProvider<ProfileStats>((ref) async {
+  final uid = ref.watch(authUserIdProvider).value;
+  if (uid == null) {
+    return const ProfileStats(
+      joinedLeaguesCount: 0,
+      createdLeaguesCount: 0,
+      bestLeaderboardPlace: null,
+    );
+  }
+
+  final leagues = await ref.watch(userLeaguesProvider.future);
+  final created = leagues.where((l) => l.adminUserId == uid).length;
+
+  int? bestPlace;
+  final firestore = ref.watch(profileFirestoreProvider);
+  for (final league in leagues) {
+    final membersSnap = await firestore
+        .collection(FirestorePaths.leagues)
+        .doc(league.id)
+        .collection("members")
+        .get();
+    final members = membersSnap.docs
+        .map((d) => d.data())
+        .where((m) => (m["userId"] as String?)?.isNotEmpty ?? false)
+        .toList();
+    members.sort((a, b) {
+      final aPoints = ((a["totalPoints"] as num?) ?? 0).toInt();
+      final bPoints = ((b["totalPoints"] as num?) ?? 0).toInt();
+      final byPoints = bPoints.compareTo(aPoints);
+      if (byPoints != 0) {
+        return byPoints;
+      }
+      final aUid = (a["userId"] as String?) ?? "";
+      final bUid = (b["userId"] as String?) ?? "";
+      return aUid.compareTo(bUid);
+    });
+
+    final place = members.indexWhere((m) => m["userId"] == uid);
+    if (place == -1) {
+      continue;
+    }
+    final rank = place + 1;
+    if (bestPlace == null || rank < bestPlace) {
+      bestPlace = rank;
+    }
+  }
+
+  return ProfileStats(
+    joinedLeaguesCount: leagues.length,
+    createdLeaguesCount: created,
+    bestLeaderboardPlace: bestPlace,
+  );
 });
 
 class ProfileController extends StateNotifier<AsyncValue<void>> {
