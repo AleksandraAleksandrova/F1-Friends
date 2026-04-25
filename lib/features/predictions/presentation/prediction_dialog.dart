@@ -1,6 +1,8 @@
 import "package:cloud_firestore/cloud_firestore.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "../../../l10n/app_localizations.dart";
+import "../../../core/utils/app_error_text.dart";
 
 import "../../../core/widgets/searchable_select_field.dart";
 import "../../races/data/f1_api_service.dart";
@@ -28,6 +30,7 @@ class PredictionDialog {
     if (!context.mounted) {
       return false;
     }
+    final l10n = AppLocalizations.of(context)!;
 
     final dnfController = TextEditingController(text: existing?.dnfCount?.toString() ?? "");
     String? p1 = _toExistingOrNull(existing?.p1DriverCode, drivers);
@@ -41,13 +44,13 @@ class PredictionDialog {
             return StatefulBuilder(
               builder: (context, setState) {
                 return AlertDialog(
-                  title: Text("Prediction: ${race.raceName}"),
+                  title: Text(l10n.predictionTitle(race.raceName)),
                   content: SingleChildScrollView(
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         _driverDropdown(
-                          label: "P1 driver",
+                          label: l10n.predictionP1Driver,
                           value: p1,
                           drivers: drivers,
                           excludedShortNames: {
@@ -58,7 +61,7 @@ class PredictionDialog {
                         ),
                         const SizedBox(height: 10),
                         _driverDropdown(
-                          label: "P2 driver",
+                          label: l10n.predictionP2Driver,
                           value: p2,
                           drivers: drivers,
                           excludedShortNames: {
@@ -69,7 +72,7 @@ class PredictionDialog {
                         ),
                         const SizedBox(height: 10),
                         _driverDropdown(
-                          label: "P3 driver",
+                          label: l10n.predictionP3Driver,
                           value: p3,
                           drivers: drivers,
                           excludedShortNames: {
@@ -80,7 +83,7 @@ class PredictionDialog {
                         ),
                         const SizedBox(height: 10),
                         _driverDropdown(
-                          label: "Fastest lap driver",
+                          label: l10n.predictionFastestLapDriver,
                           value: fl,
                           drivers: drivers,
                           excludedShortNames: const <String>{},
@@ -91,7 +94,7 @@ class PredictionDialog {
                           controller: dnfController,
                           keyboardType: TextInputType.number,
                           style: const TextStyle(color: Colors.black87),
-                          decoration: const InputDecoration(labelText: "DNF count (optional)"),
+                          decoration: InputDecoration(labelText: l10n.predictionDnfOptional),
                         ),
                       ],
                     ),
@@ -99,13 +102,13 @@ class PredictionDialog {
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(dialogContext).pop(false),
-                      child: const Text("Cancel"),
+                      child: Text(l10n.commonCancel),
                     ),
                     FilledButton(
                       onPressed: () async {
                         if (p1 == null || p2 == null || p3 == null || fl == null) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            const SnackBar(content: Text("Please select all required drivers.")),
+                            SnackBar(content: Text(l10n.predictionSelectAllDrivers)),
                           );
                           return;
                         }
@@ -113,19 +116,19 @@ class PredictionDialog {
                         final parsedDnf = rawDnf.isEmpty ? null : int.tryParse(rawDnf);
                         if (parsedDnf == null && rawDnf.isNotEmpty) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            const SnackBar(content: Text("DNF must be a non-negative integer.")),
+                            SnackBar(content: Text(l10n.predictionDnfInteger)),
                           );
                           return;
                         }
                         if (parsedDnf != null && parsedDnf < 0) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            const SnackBar(content: Text("DNF must be a non-negative integer.")),
+                            SnackBar(content: Text(l10n.predictionDnfInteger)),
                           );
                           return;
                         }
                         if ({p1, p2, p3}.length != 3) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            const SnackBar(content: Text("P1, P2, and P3 must be different.")),
+                            SnackBar(content: Text(l10n.predictionPodiumDistinct)),
                           );
                           return;
                         }
@@ -133,8 +136,7 @@ class PredictionDialog {
                         try {
                           final lockAt = lockAtUtc(race);
                           if (!DateTime.now().toUtc().isBefore(lockAt)) {
-                            throw StateError("Predictions are locked for this race (qualifying has ended)."
-                                );
+                            throw StateError(l10n.predictionLockedAfterQualy);
                           }
                           await ref.read(predictionsControllerProvider.notifier).save(
                                 raceId: race.id,
@@ -152,32 +154,32 @@ class PredictionDialog {
                         } catch (error) {
                           if (dialogContext.mounted) {
                             ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              SnackBar(content: Text(_friendlyError(error))),
+                              SnackBar(content: Text(_friendlyError(l10n, error))),
                             );
                           }
                         }
                       },
-                      child: Text(existing == null ? "Save" : "Update"),
+                      child: Text(existing == null ? l10n.commonSave : l10n.commonUpdate),
                     ),
                   ],
                 );
               },
             );
           },
-        ) ??
+        ).whenComplete(dnfController.dispose) ??
         false;
 
     return saved;
   }
 
-  static String _friendlyError(Object error) {
+  static String _friendlyError(AppLocalizations l10n, Object error) {
     if (error is FirebaseException && error.code == "permission-denied") {
-      return "Firestore permissions denied. Please publish latest rules and restart.";
+      return l10n.predictionPermissionDenied;
     }
     if (error is StateError) {
       return error.message;
     }
-    return error.toString();
+    return AppErrorText.describe(l10n, error);
   }
 
   static String? _toExistingOrNull(String? shortName, List<F1Driver> drivers) {
@@ -204,7 +206,7 @@ class PredictionDialog {
     return SearchableSelectField(
       width: 320,
       label: label,
-      hintText: "Type to filter (e.g. max)",
+      hintText: null,
       selectedValue: value,
       onChanged: onChanged,
       items: entries,

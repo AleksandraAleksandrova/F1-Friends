@@ -1,9 +1,12 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "../../../l10n/app_localizations.dart";
+import "../../../core/utils/app_error_text.dart";
 
 import "../../auth/providers/auth_providers.dart";
 import "../../../core/widgets/searchable_select_field.dart";
 import "../domain/league.dart";
+import "../domain/league_member.dart";
 import "../../predictions/domain/prediction.dart";
 import "../../predictions/presentation/prediction_dialog.dart";
 import "../../predictions/providers/predictions_providers.dart";
@@ -28,11 +31,13 @@ class LeagueDetailsScreen extends ConsumerStatefulWidget {
 
 class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
   String? _selectedRaceId;
+  bool _showDemoTools = false;
 
   Future<MockRaceResult?> _showMockResultDialog(
     BuildContext context,
     List<F1Driver> drivers,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     String? p1;
     String? p2;
     String? p3;
@@ -49,7 +54,7 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
             final p3Options = drivers.where((d) => d.shortName != p1 && d.shortName != p2).toList();
 
             return AlertDialog(
-              title: const Text("Apply Mock Race Result"),
+              title: Text(l10n.leagueMockApplyTitle),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -76,7 +81,7 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                     ),
                     const SizedBox(height: 8),
                     _driverSearchField(
-                      label: "Fastest lap",
+                      label: l10n.leagueFastestLap,
                       value: fastestLap,
                       drivers: drivers,
                       onSelected: (v) => setLocalState(() => fastestLap = v),
@@ -86,7 +91,7 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                       controller: dnfController,
                       keyboardType: TextInputType.number,
                       style: const TextStyle(color: Colors.black87),
-                      decoration: const InputDecoration(labelText: "DNF count"),
+                      decoration: InputDecoration(labelText: l10n.leagueDnfCount),
                     ),
                   ],
                 ),
@@ -94,26 +99,26 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text("Cancel"),
+                  child: Text(l10n.commonCancel),
                 ),
                 FilledButton(
                   onPressed: () {
                     final dnf = int.tryParse(dnfController.text);
                     if (p1 == null || p2 == null || p3 == null || fastestLap == null) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Select all required fields.")),
+                        SnackBar(content: Text(l10n.leagueSelectAllFields)),
                       );
                       return;
                     }
                     if ({p1, p2, p3}.length != 3) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("P1, P2 and P3 must be different drivers.")),
+                        SnackBar(content: Text(l10n.leagueDistinctPodiumDrivers)),
                       );
                       return;
                     }
                     if (dnf == null || dnf < 0) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("DNF must be a non-negative number.")),
+                        SnackBar(content: Text(l10n.leagueDnfNonNegative)),
                       );
                       return;
                     }
@@ -127,14 +132,14 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                       ),
                     );
                   },
-                  child: const Text("Apply"),
+                  child: Text(l10n.commonCreate),
                 ),
               ],
             );
           },
         );
       },
-    );
+    ).whenComplete(dnfController.dispose);
   }
 
   Widget _driverSearchField({
@@ -146,7 +151,7 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
     return SearchableSelectField(
       width: 320,
       label: label,
-      hintText: "Type to filter (e.g. max)",
+      hintText: null,
       selectedValue: value,
       onChanged: onSelected,
       items: drivers
@@ -157,6 +162,7 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final league = widget.league;
     final membersAsync = ref.watch(leagueMembersProvider(league.id));
     final currentUid = ref.watch(authUserIdProvider).value;
@@ -164,26 +170,26 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("League Details"),
+        title: Text(l10n.leagueDetailsTitle),
         actions: [
           if (isAdmin)
             IconButton(
-              tooltip: "Delete league",
+              tooltip: l10n.leagueDeleteTooltip,
               icon: const Icon(Icons.delete_outline),
               onPressed: () async {
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text("Delete League"),
-                    content: const Text("This will permanently remove the league and its members list."),
+                    title: Text(l10n.leagueDeleteTitle),
+                    content: Text(l10n.leagueDeleteMessage),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text("Cancel"),
+                        child: Text(l10n.commonCancel),
                       ),
                       FilledButton(
                         onPressed: () => Navigator.of(context).pop(true),
-                        child: const Text("Delete"),
+                        child: Text(l10n.commonDelete),
                       ),
                     ],
                   ),
@@ -198,14 +204,14 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                   }
                   Navigator.of(context).pop();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("League deleted.")),
+                    SnackBar(content: Text(l10n.leagueDeleted)),
                   );
                 } catch (e) {
                   if (!context.mounted) {
                     return;
                   }
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Failed to delete league: $e")),
+                    SnackBar(content: Text(l10n.leagueDeleteFailed(AppErrorText.describe(l10n, e)))),
                   );
                 }
               },
@@ -218,262 +224,562 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
 
           return racesAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text("Failed to load races: $e")),
+            error: (e, _) => Center(child: Text(l10n.leagueLoadRacesFailed(AppErrorText.describe(l10n, e)))),
             data: (seasonRaces) {
               final leagueRaces = seasonRaces
                   .where((r) => r.round >= league.startRound && r.round <= league.endRound)
                   .toList()
                 ..sort((a, b) => a.round.compareTo(b.round));
 
-              if (leagueRaces.isNotEmpty &&
-                  (_selectedRaceId == null || !leagueRaces.any((r) => r.id == _selectedRaceId))) {
-                _selectedRaceId = leagueRaces.first.id;
-              }
+              final effectiveSelectedRaceId = leagueRaces.any((r) => r.id == _selectedRaceId)
+                  ? _selectedRaceId
+                  : (leagueRaces.isNotEmpty ? leagueRaces.first.id : null);
 
-              final RaceWeekend? selectedRace = leagueRaces.firstWhereOrNull((r) => r.id == _selectedRaceId);
+              final selectedRace = leagueRaces.firstWhereOrNull((r) => r.id == effectiveSelectedRaceId);
               final predictionsAsync = selectedRace == null
                   ? const AsyncValue<List<Prediction>>.data(<Prediction>[])
                   : ref.watch(predictionsForRaceProvider(selectedRace.id));
 
-              return Padding(
+              return ListView(
                 padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(league.name, style: Theme.of(context).textTheme.titleLarge),
-                            const SizedBox(height: 4),
-                            Text("Rounds ${league.startRound}-${league.endRound}, Season ${league.seasonYear}"),
-                            const SizedBox(height: 4),
-                            Text("Members: ${league.memberCount}"),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (leagueRaces.isEmpty)
-                      const Text("No races found in this league range.")
-                    else
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedRaceId,
-                        decoration: const InputDecoration(labelText: "Race"),
-                        isExpanded: true,
-                        items: leagueRaces
-                            .map(
-                              (race) => DropdownMenuItem<String>(
-                                value: race.id,
-                                child: Text("R${race.round} - ${race.raceName}"),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) => setState(() => _selectedRaceId = value),
-                      ),
-                    const SizedBox(height: 12),
-                    if (selectedRace != null) ...[
-                      Builder(
-                        builder: (context) {
-                          final isLocked =
-                              !DateTime.now().toUtc().isBefore(PredictionDialog.lockAtUtc(selectedRace));
-                          return Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  "Predictions for R${selectedRace.round}",
-                                  style: Theme.of(context).textTheme.titleMedium,
-                                ),
-                              ),
-                              if (!isLocked)
-                                FilledButton.tonal(
-                                  onPressed: () async {
-                                    final saved = await PredictionDialog.show(
-                                      context: context,
-                                      ref: ref,
-                                      race: selectedRace,
-                                    );
-                                    if (!mounted) {
-                                      return;
-                                    }
-                                    if (saved) {
-                                      ref.invalidate(predictionsForRaceProvider(selectedRace.id));
-                                      ref.invalidate(predictionForRaceProvider(selectedRace.id));
-                                      if (!context.mounted) {
-                                        return;
-                                      }
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("Prediction updated.")),
-                                      );
-                                    }
-                                  },
-                                  child: const Text("Edit Mine"),
-                                ),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: membersAsync.when(
-                          loading: () => const Center(child: CircularProgressIndicator()),
-                          error: (e, _) => Center(child: Text("Failed to load members: $e")),
-                          data: (members) {
-                            return predictionsAsync.when(
-                              loading: () => const Center(child: CircularProgressIndicator()),
-                              error: (e, _) => Center(child: Text("Failed to load predictions: $e")),
-                              data: (predictions) {
-                                final byUser = {for (final p in predictions) p.userId: p};
-
-                                return ListView.separated(
-                                  itemCount: members.length,
-                                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                                  itemBuilder: (context, index) {
-                                    final member = members[index];
-                                    final uid = member.userId;
-                                    final usernameAsync = ref.watch(usernameByUserIdProvider(uid));
-                                    final displayName = usernameAsync.maybeWhen(
-                                      data: (name) => name,
-                                      orElse: () => (uid.length > 6 ? uid.substring(0, 6) : uid),
-                                    );
-                                    final p = byUser[uid];
-                                    final mine = uid == currentUid;
-                                    return Card(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Expanded(
-                                                  child: Text(
-                                                    "${index + 1}. ${mine ? "You ($displayName)" : displayName}",
-                                                    style: Theme.of(context).textTheme.titleSmall,
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                                Container(
-                                                  padding: const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                                    borderRadius: BorderRadius.circular(999),
-                                                  ),
-                                                  child: Text("${member.totalPoints} pts"),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 6),
-                                            if (p == null)
-                                              const Text("No prediction submitted yet.")
-                                            else
-                                              Text(
-                                                "P1 ${p.p1DriverCode} | P2 ${p.p2DriverCode} | "
-                                                "P3 ${p.p3DriverCode} | FL ${p.fastestLapDriverCode} | "
-                                                "DNF ${p.dnfCount ?? "-"}",
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Center(
-                            child: Wrap(
-                              alignment: WrapAlignment.center,
-                              spacing: 8,
-                              runSpacing: 8,
+                children: [
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            height: 46,
+                            width: 46,
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primaryContainer,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Icon(
+                              Icons.emoji_events_outlined,
+                              color: Theme.of(context).colorScheme.onPrimaryContainer,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                FilledButton(
-                                  onPressed: () async {
-                                    try {
-                                      final drivers = await ref.read(currentDriversProvider.future);
-                                      if (!mounted) {
-                                        return;
-                                      }
-                                      final mockResult = await _showMockResultDialog(this.context, drivers);
-                                      if (mockResult == null) {
-                                        return;
-                                      }
-                                      await ref.read(mockScoringServiceProvider).applyMockResult(
-                                            league: league,
-                                            raceId: selectedRace.id,
-                                            result: mockResult,
-                                          );
-                                      ref.invalidate(leagueMembersProvider(league.id));
-                                      if (!mounted) {
-                                        return;
-                                      }
-                                      ScaffoldMessenger.of(this.context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text("Mock scoring applied. Leaderboard updated."),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      if (!mounted) {
-                                        return;
-                                      }
-                                      ScaffoldMessenger.of(this.context).showSnackBar(
-                                        SnackBar(content: Text("Failed to apply mock result: $e")),
-                                      );
-                                    }
-                                  },
-                                  child: const Text("Apply Mock Result"),
-                                ),
-                                OutlinedButton(
-                                  onPressed: () async {
-                                    try {
-                                      await ref.read(mockScoringServiceProvider).revertMockResult(
-                                            league: league,
-                                            raceId: selectedRace.id,
-                                          );
-                                      ref.invalidate(leagueMembersProvider(league.id));
-                                      if (!mounted) {
-                                        return;
-                                      }
-                                      ScaffoldMessenger.of(this.context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text("Mock points reverted for this race."),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      if (!mounted) {
-                                        return;
-                                      }
-                                      ScaffoldMessenger.of(this.context).showSnackBar(
-                                        SnackBar(content: Text("Failed to revert mock points: $e")),
-                                      );
-                                    }
-                                  },
-                                  child: const Text("Revert Mock Points"),
+                                Text(league.name, style: Theme.of(context).textTheme.titleLarge),
+                                const SizedBox(height: 6),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    _LeagueBadge(
+                                      icon: Icons.flag_outlined,
+                                      label: "R${league.startRound}-R${league.endRound}",
+                                    ),
+                                    _LeagueBadge(
+                                      icon: Icons.calendar_today_outlined,
+                                      label: "${league.seasonYear}",
+                                    ),
+                                    _LeagueBadge(
+                                      icon: Icons.groups_2_outlined,
+                                      label: l10n.leagueMembersCount(league.memberCount),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (leagueRaces.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 24),
+                      child: Center(
+                        child: _EmptyStateCard(
+                          icon: Icons.flag_outlined,
+                          message: l10n.leagueNoRaces,
                         ),
                       ),
-                    ],
+                    )
+                  else
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: DropdownButtonFormField<String>(
+                          key: ValueKey(effectiveSelectedRaceId ?? "no-race"),
+                          initialValue: effectiveSelectedRaceId,
+                          decoration: InputDecoration(labelText: l10n.leagueRaceField),
+                          isExpanded: true,
+                          items: leagueRaces
+                              .map(
+                                (race) => DropdownMenuItem<String>(
+                                  value: race.id,
+                                  child: Text("R${race.round} - ${race.raceName}"),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) => setState(() => _selectedRaceId = value),
+                        ),
+                      ),
+                    ),
+                  if (selectedRace != null) ...[
+                    const SizedBox(height: 12),
+                    _PredictionsHeaderCard(
+                      race: selectedRace,
+                      onEditMine: () async {
+                        final saved = await PredictionDialog.show(
+                          context: context,
+                          ref: ref,
+                          race: selectedRace,
+                        );
+                        if (!mounted || !saved) {
+                          return;
+                        }
+                        ref.invalidate(predictionsForRaceProvider(selectedRace.id));
+                        ref.invalidate(predictionForRaceProvider(selectedRace.id));
+                        if (!context.mounted) {
+                          return;
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.leaguePredictionUpdated)),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    membersAsync.when(
+                      loading: () => const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                      error: (e, _) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Text(l10n.leagueLoadMembersFailed(AppErrorText.describe(l10n, e))),
+                        ),
+                      ),
+                      data: (members) {
+                        return predictionsAsync.when(
+                          loading: () => const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          error: (e, _) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: Text(l10n.leagueLoadPredictionsFailed(AppErrorText.describe(l10n, e))),
+                            ),
+                          ),
+                          data: (predictions) {
+                            final byUser = {for (final p in predictions) p.userId: p};
+                            if (members.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 24),
+                                child: Center(
+                                  child: _EmptyStateCard(
+                                    icon: Icons.groups_outlined,
+                                    message: l10n.leagueMembersCount(0),
+                                  ),
+                                ),
+                              );
+                            }
+
+                            return Column(
+                              children: [
+                                for (var index = 0; index < members.length; index++) ...[
+                                  if (index > 0) const SizedBox(height: 8),
+                                  _MemberPredictionCard(
+                                    index: index,
+                                    member: members[index],
+                                    prediction: byUser[members[index].userId],
+                                    currentUid: currentUid,
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    if (isAdmin)
+                      _DemoToolsCard(
+                        league: league,
+                        race: selectedRace,
+                        showDemoTools: _showDemoTools,
+                        onToggle: () => setState(() => _showDemoTools = !_showDemoTools),
+                      ),
                   ],
-                ),
+                ],
               );
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _LeagueBadge extends StatelessWidget {
+  const _LeagueBadge({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PredictionsHeaderCard extends StatelessWidget {
+  const _PredictionsHeaderCard({
+    required this.race,
+    required this.onEditMine,
+  });
+
+  final RaceWeekend race;
+  final Future<void> Function() onEditMine;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isLocked = !DateTime.now().toUtc().isBefore(PredictionDialog.lockAtUtc(race));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            SizedBox(
+              width: 260,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.leaguePredictionsForRound(race.round),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    race.raceName,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+            if (isLocked)
+              _LeagueBadge(
+                icon: Icons.lock_outline,
+                label: l10n.racesLocked,
+              )
+            else
+              FilledButton.tonal(
+                onPressed: onEditMine,
+                child: Text(l10n.leagueEditMine),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DemoToolsCard extends ConsumerWidget {
+  const _DemoToolsCard({
+    required this.league,
+    required this.race,
+    required this.showDemoTools,
+    required this.onToggle,
+  });
+
+  final League league;
+  final RaceWeekend race;
+  final bool showDemoTools;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              runSpacing: 12,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                SizedBox(
+                  width: 180,
+                  child: Text(
+                    l10n.leagueDemoTools,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: onToggle,
+                  icon: Icon(showDemoTools ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                  label: Text(showDemoTools ? l10n.leagueHideDemoTools : l10n.leagueShowDemoTools),
+                ),
+              ],
+            ),
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: Padding(
+                padding: const EdgeInsets.only(top: 14),
+                child: Center(
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      FilledButton(
+                        onPressed: () async {
+                          try {
+                            final drivers = await ref.read(currentDriversProvider.future);
+                            if (!context.mounted) {
+                              return;
+                            }
+                            final state = context.findAncestorStateOfType<_LeagueDetailsScreenState>();
+                            final mockResult = await state?._showMockResultDialog(context, drivers);
+                            if (mockResult == null) {
+                              return;
+                            }
+                            await ref.read(mockScoringServiceProvider).applyMockResult(
+                                  league: league,
+                                  raceId: race.id,
+                                  result: mockResult,
+                                );
+                            ref.invalidate(leagueMembersProvider(league.id));
+                            if (!context.mounted) {
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l10n.leagueMockApplied)),
+                            );
+                          } catch (e) {
+                            if (!context.mounted) {
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  l10n.leagueMockApplyFailed(AppErrorText.describe(l10n, e)),
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Text(l10n.leagueMockApplyButton),
+                      ),
+                      OutlinedButton(
+                        onPressed: () async {
+                          try {
+                            await ref.read(mockScoringServiceProvider).revertMockResult(
+                                  league: league,
+                                  raceId: race.id,
+                                );
+                            ref.invalidate(leagueMembersProvider(league.id));
+                            if (!context.mounted) {
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l10n.leagueMockReverted)),
+                            );
+                          } catch (e) {
+                            if (!context.mounted) {
+                              return;
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  l10n.leagueMockRevertFailed(AppErrorText.describe(l10n, e)),
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                        child: Text(l10n.leagueMockRevertButton),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              crossFadeState: showDemoTools ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 180),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PredictionToken extends StatelessWidget {
+  const _PredictionToken({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+    );
+  }
+}
+
+class _MemberPredictionCard extends ConsumerWidget {
+  const _MemberPredictionCard({
+    required this.index,
+    required this.member,
+    required this.prediction,
+    required this.currentUid,
+  });
+
+  final int index;
+  final LeagueMember member;
+  final Prediction? prediction;
+  final String? currentUid;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final uid = member.userId;
+    final usernameAsync = ref.watch(usernameByUserIdProvider(uid));
+    final displayName = usernameAsync.maybeWhen(
+      data: (name) => name,
+      orElse: () => (uid.length > 6 ? uid.substring(0, 6) : uid),
+    );
+    final mine = uid == currentUid;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                  child: Text(
+                    "${index + 1}",
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    mine ? l10n.leagueYouWithName(displayName) : displayName,
+                    style: Theme.of(context).textTheme.titleSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Chip(label: Text(l10n.leaguePoints(member.totalPoints))),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (prediction == null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(l10n.leagueNoPrediction),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _PredictionToken(label: "P1 ${prediction!.p1DriverCode}"),
+                  _PredictionToken(label: "P2 ${prediction!.p2DriverCode}"),
+                  _PredictionToken(label: "P3 ${prediction!.p3DriverCode}"),
+                  _PredictionToken(label: "FL ${prediction!.fastestLapDriverCode}"),
+                  _PredictionToken(label: "DNF ${prediction!.dnfCount ?? "-"}"),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyStateCard extends StatelessWidget {
+  const _EmptyStateCard({
+    required this.icon,
+    required this.message,
+  });
+
+  final IconData icon;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 42, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ],
+        ),
       ),
     );
   }

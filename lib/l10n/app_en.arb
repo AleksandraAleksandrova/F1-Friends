@@ -1,0 +1,338 @@
+{
+  "@@locale": "en",
+  "appTitle": "F1 Friends",
+  "authSignIn": "Sign In",
+  "authCreateAccount": "Create Account",
+  "authNeedAccount": "Need an account? Register",
+  "authHaveAccount": "Have an account? Sign In",
+  "authEmailOrUsername": "Email or Username",
+  "authUsername": "Username",
+  "authEmail": "Email",
+  "authPassword": "Password",
+  "authForgotPassword": "Forgot password?",
+  "authRegister": "Register",
+  "authEnterEmailOrUsername": "Enter email or username",
+  "authEnterValidEmail": "Enter a valid email",
+  "authUsernameValidation": "Username: 3+ chars, letters/numbers/_ only",
+  "authPasswordMin": "Password must be at least 6 characters",
+  "authPasswordRule": "Password must include at least one letter and one number",
+  "authResetPassword": "Reset Password",
+  "authAccountEmail": "Account email",
+  "commonCancel": "Cancel",
+  "commonCreate": "Create",
+  "commonJoin": "Join",
+  "commonDelete": "Delete",
+  "commonUpdate": "Update",
+  "commonSave": "Save",
+  "commonEdit": "Edit",
+  "commonLoading": "Loading...",
+  "commonRefresh": "Refresh",
+  "commonUnknown": "unknown",
+  "commonSearchHint": "Type to filter (e.g. max)",
+  "authSendLink": "Send Link",
+  "authPasswordResetSent": "Password reset link sent to email.",
+  "authErrorInvalidCredentials": "Invalid credentials. Please check your username/email and password.",
+  "authErrorEmailExists": "This email is already registered.",
+  "authErrorTooManyRequests": "Too many attempts. Please wait and try again.",
+  "authErrorNetwork": "Network error. Check your connection and try again.",
+  "authErrorInvalidEmail": "Invalid email address.",
+  "authErrorUsernameLoginUnavailable": "Login by username is not available until Firestore rules are published.",
+  "authErrorGeneric": "Authentication failed. Please try again.",
+  "authErrorUnexpected": "Unexpected error. Please try again.",
+  "errorUserNotAuthenticated": "You need to sign in again to continue.",
+  "errorUsernameTaken": "Username is already taken.",
+  "errorUsernameReserveFailed": "Could not reserve a unique username. Please try another one.",
+  "errorLeagueJoinCodeNotFound": "League with this join code was not found.",
+  "errorLeagueJoinCodeInvalid": "Join code mapping is invalid.",
+  "errorLeagueNotFound": "League was not found.",
+  "errorLeagueDeleteAdminOnly": "Only the league admin can delete this league.",
+  "errorJoinCodeGeneration": "Could not generate a unique join code. Please retry.",
+  "errorPredictionsLocked": "Predictions are locked for this race.",
+  "errorPredictionDriversRequired": "All driver fields are required.",
+  "errorPredictionPodiumDistinct": "P1, P2, and P3 must be different drivers.",
+  "errorPredictionDnfNegative": "DNF count cannot be negative.",
+  "errorApiLoad": "Could not load Formula 1 data right now. Please try again.",
+  "errorGenericAction": "Something went wrong. Please try again.",
+  "homeNavLeagues": "Leagues",
+  "homeNavRaces": "Races",
+  "homeNavProfile": "Profile",
+  "leaguesTitle": "My Leagues",
+  "leaguesSubtitle": "Compete with private friend leagues",
+  "leaguesCreate": "Create League",
+  "leaguesJoin": "Join League",
+  "leaguesEmpty": "No leagues yet. Create one or join with a code.",
+  "leaguesAdmin": "Admin",
+  "leaguesSeason": "Season",
+  "leaguesMembers": "Members",
+  "leaguesFailedLoad": "Failed to load leagues: {error}",
+  "@leaguesFailedLoad": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leaguesPermissionDenied": "Firestore permission denied. Deploy firestore.rules, then restart the app.",
+  "leaguesCreateDialogTitle": "Create League",
+  "leaguesName": "League name",
+  "leaguesNameValidation": "Enter at least 3 characters",
+  "leaguesSeasonYear": "Season year",
+  "leaguesInvalidYear": "Invalid year",
+  "leaguesStartRound": "Start round",
+  "leaguesEndRound": "End round",
+  "leaguesStartPositive": "Start round must be positive",
+  "leaguesEndPositive": "End round must be positive",
+  "leaguesStartMax": "Start round must be <= {maxRound}",
+  "@leaguesStartMax": {
+    "placeholders": {
+      "maxRound": {}
+    }
+  },
+  "leaguesEndMax": "End round must be <= {maxRound}",
+  "@leaguesEndMax": {
+    "placeholders": {
+      "maxRound": {}
+    }
+  },
+  "leaguesEndAfterStart": "End round must be >= start round",
+  "leaguesRoundsRange": "Rounds must be in range 1..{maxRound}.",
+  "@leaguesRoundsRange": {
+    "placeholders": {
+      "maxRound": {}
+    }
+  },
+  "leaguesCreated": "League created.",
+  "leaguesJoinDialogTitle": "Join League",
+  "leaguesJoinCode": "Join code",
+  "leaguesJoinCodeValidation": "Enter a valid join code",
+  "leaguesJoined": "Joined league.",
+  "leaguesAlreadyJoined": "Already joined. Duplicate join is not allowed.",
+  "leagueDetailsTitle": "League Details",
+  "leagueDeleteTooltip": "Delete league",
+  "leagueDeleteTitle": "Delete League",
+  "leagueDeleteMessage": "This will permanently remove the league and its members list.",
+  "leagueDeleted": "League deleted.",
+  "leagueDeleteFailed": "Failed to delete league: {error}",
+  "@leagueDeleteFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueLoadRacesFailed": "Failed to load races: {error}",
+  "@leagueLoadRacesFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueRoundsSeason": "Rounds {startRound}-{endRound}, Season {seasonYear}",
+  "@leagueRoundsSeason": {
+    "placeholders": {
+      "startRound": {},
+      "endRound": {},
+      "seasonYear": {}
+    }
+  },
+  "leagueMembersCount": "Members: {count}",
+  "@leagueMembersCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "leagueNoRaces": "No races found in this league range.",
+  "leagueRaceField": "Race",
+  "leaguePredictionsForRound": "Predictions for R{round}",
+  "@leaguePredictionsForRound": {
+    "placeholders": {
+      "round": {}
+    }
+  },
+  "leagueEditMine": "Edit Mine",
+  "leaguePredictionUpdated": "Prediction updated.",
+  "leagueLoadMembersFailed": "Failed to load members: {error}",
+  "@leagueLoadMembersFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueLoadPredictionsFailed": "Failed to load predictions: {error}",
+  "@leagueLoadPredictionsFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueYouWithName": "You ({name})",
+  "@leagueYouWithName": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "leaguePoints": "{points} pts",
+  "@leaguePoints": {
+    "placeholders": {
+      "points": {}
+    }
+  },
+  "leagueNoPrediction": "No prediction submitted yet.",
+  "leaguePredictionSummary": "P1 {p1} | P2 {p2} | P3 {p3} | FL {fl} | DNF {dnf}",
+  "@leaguePredictionSummary": {
+    "placeholders": {
+      "p1": {},
+      "p2": {},
+      "p3": {},
+      "fl": {},
+      "dnf": {}
+    }
+  },
+  "leagueMockApplyTitle": "Apply Mock Race Result",
+  "leagueFastestLap": "Fastest lap",
+  "leagueDnfCount": "DNF count",
+  "leagueSelectAllFields": "Select all required fields.",
+  "leagueDistinctPodiumDrivers": "P1, P2 and P3 must be different drivers.",
+  "leagueDnfNonNegative": "DNF must be a non-negative number.",
+  "leagueMockApplied": "Mock scoring applied. Leaderboard updated.",
+  "leagueMockApplyFailed": "Failed to apply mock result: {error}",
+  "@leagueMockApplyFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueMockReverted": "Mock points reverted for this race.",
+  "leagueMockRevertFailed": "Failed to revert mock points: {error}",
+  "@leagueMockRevertFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueMockApplyButton": "Apply Mock Result",
+  "leagueMockRevertButton": "Revert Mock Points",
+  "leagueDemoTools": "Demo tools",
+  "leagueShowDemoTools": "Show demo tools",
+  "leagueHideDemoTools": "Hide demo tools",
+  "racesTitle": "Races",
+  "racesNextRace": "Next Race",
+  "racesLastRace": "Last Race",
+  "racesLatestResults": "Latest Results",
+  "racesCurrentSeasonRounds": "Current Season Rounds",
+  "racesNoUpcoming": "No upcoming race returned by API.",
+  "racesNoLast": "No last race details returned by API.",
+  "racesNoResults": "No result data available.",
+  "racesNoSeasonRaces": "No races found for current season.",
+  "racesFailedLoadApi": "Failed to load API race data: {error}",
+  "@racesFailedLoadApi": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "racesLocked": "Locked",
+  "racesPredict": "Predict",
+  "racesPredictionSaved": "Prediction saved.",
+  "racesLock": "Lock: {date}",
+  "@racesLock": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "racesRoundSeason": "Round {round}, Season {season}",
+  "@racesRoundSeason": {
+    "placeholders": {
+      "round": {},
+      "season": {}
+    }
+  },
+  "racesRaceStart": "Race start: {date}",
+  "@racesRaceStart": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "racesExpectedEnd": "Expected end: {date}",
+  "@racesExpectedEnd": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "racesQualyStart": "Qualy start: {date}",
+  "@racesQualyStart": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "racesFastestLap": "Fastest lap: {driver}",
+  "@racesFastestLap": {
+    "placeholders": {
+      "driver": {}
+    }
+  },
+  "racesDnfs": "DNFs: {count}",
+  "@racesDnfs": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "predictionTitle": "Prediction: {raceName}",
+  "@predictionTitle": {
+    "placeholders": {
+      "raceName": {}
+    }
+  },
+  "predictionP1Driver": "P1 driver",
+  "predictionP2Driver": "P2 driver",
+  "predictionP3Driver": "P3 driver",
+  "predictionFastestLapDriver": "Fastest lap driver",
+  "predictionDnfOptional": "DNF count (optional)",
+  "predictionSelectAllDrivers": "Please select all required drivers.",
+  "predictionDnfInteger": "DNF must be a non-negative integer.",
+  "predictionPodiumDistinct": "P1, P2, and P3 must be different.",
+  "predictionLockedAfterQualy": "Predictions are locked for this race (qualifying has ended).",
+  "predictionPermissionDenied": "Firestore permissions denied. Please publish latest rules and restart.",
+  "profileTitle": "Profile",
+  "profileFailedLoad": "Failed to load profile: {error}",
+  "@profileFailedLoad": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileChangePhoto": "Change photo",
+  "profileChooseFromGallery": "Choose from gallery",
+  "profileTakePhoto": "Take photo",
+  "profileUsername": "Username",
+  "profileEditUsername": "Edit username",
+  "profileUsernameHelper": "At least 3 characters",
+  "profileEmail": "Email",
+  "profileMyOverview": "My Overview",
+  "profileLoadingStats": "Loading stats...",
+  "profileStatsUnavailable": "Stats unavailable: {error}",
+  "@profileStatsUnavailable": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileJoinedLeagues": "Joined leagues: {count}",
+  "@profileJoinedLeagues": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "profileCreatedLeagues": "Created leagues: {count}",
+  "@profileCreatedLeagues": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "profileBestLeaderboardPlace": "Best leaderboard place: {place}",
+  "@profileBestLeaderboardPlace": {
+    "placeholders": {
+      "place": {}
+    }
+  },
+  "profileBestLeaderboardPlaceNone": "Best leaderboard place: N/A",
+  "profileLanguage": "Language",
+  "profileSignOut": "Sign Out",
+  "projectLoadingFailed": "Could not load this section right now.",
+  "languageEnglish": "English",
+  "languageFrench": "French",
+  "languageItalian": "Italian",
+  "notificationsChannelName": "Prediction Reminders",
+  "notificationsChannelDescription": "Reminders to submit race predictions",
+  "notificationsDefaultTitle": "F1 Friends",
+  "notificationsDefaultBody": "New update available.",
+  "notificationsStartupBody": "Create a league and invite friends to predict next race!"
+}

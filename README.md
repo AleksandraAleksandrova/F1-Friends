@@ -1,82 +1,70 @@
-# F1 Friends (Flutter + Firebase)
+# F1 Friends
 
-New project root: `pmu/F1-Friends`
+Mobile-first Formula 1 prediction app for private friend leagues, built with Flutter and Firebase.
 
 ## Stack
-- Frontend: Flutter (Android target)
-- State management: Riverpod
-- Backend: Firebase only
-  - Firebase Authentication
-  - Cloud Firestore
-  - Firebase Storage
-  - Firebase Cloud Messaging
+- Flutter
+- Riverpod
+- Firebase Authentication
+- Cloud Firestore
+- Firebase Storage
+- Firebase Cloud Messaging
 
-## Why this stack fits this project
-- Mobile development: Flutter gives fast Android iteration and clean UI architecture.
-- OS feature integration: camera/gallery and push notifications are first-class via Flutter plugins.
-- Simpler deployment: Firebase removes server hosting and database operations overhead.
-- University constraints: faster delivery, clear architecture, lower infrastructure complexity.
+## Current Features
+- Email/password authentication
+- Login with email or username
+- Password reset by email
+- Private leagues with join code
+- League member leaderboard
+- Race weekends and latest result data from `f1api.dev`
+- One prediction per user per race
+- Prediction lock after estimated qualifying end
+- Mock scoring flow for demos/presentations
+- Profile username editing
+- Profile image upload from gallery/camera
+- In-app language selection
+- English and French localization
 
-## Architecture
-- `features/*/domain`: pure models
-- `features/*/data`: service contracts/implementations
-- `features/*/providers`: state management and controllers
-- `features/*/presentation`: UI screens/widgets
-- `services/`: cross-feature platform services (storage, notifications)
-- `docs/firebase/`: Firestore schema and scheduled scoring design
+## Project Structure
+- `lib/features/*/domain`
+  - app models and entities
+- `lib/features/*/data`
+  - data services and integrations
+- `lib/features/*/providers`
+  - Riverpod state and controllers
+- `lib/features/*/presentation`
+  - screens and widgets
+- `lib/core`
+  - shared constants, UI helpers, notifications, utilities
+- `lib/l10n`
+  - localization files and generated translations
 
-## Implemented now
-- Main app entry with Firebase initialization
-- Working authentication (email/password sign in, register, sign out)
-- Private leagues:
-  - create league
-  - join by code
-  - list user's leagues
-- Race integration with F1 API:
-  - current next race
-  - current last race
-  - latest race results
-  - current season races
-  - current season drivers
-- Prediction flow:
-  - one prediction per user per race (upsert by deterministic doc id)
-  - P1/P2/P3/fastest lap driver + optional DNF
-  - dropdown driver selection from API
-  - podium positions are mutually exclusive in UI
-  - prediction lock after estimated qualifying end
-- Firestore schema and security rules in repo
-
-## Android setup
-1. Install Flutter SDK and Android Studio.
-2. In project root, run:
+## Local Setup
+1. Open a terminal in:
+   - `C:\Users\Admin\Desktop\uni\3-2\pmu\F1-Friends`
+2. Install dependencies:
    - `flutter pub get`
-3. Configure Firebase Android app and download `google-services.json`.
-4. Place `google-services.json` in `android/app/`.
-5. Replace `lib/firebase/firebase_config.dart` values using FlutterFire CLI output.
-6. Run emulator and start app:
+3. Ensure Firebase Android config exists:
+   - `android/app/google-services.json`
+4. Publish Firestore rules from:
+   - `firestore.rules`
+5. Run the app:
    - `flutter run`
 
-## Firestore rules deployment (required)
-Leagues screen requires Firestore security rules in this repo.
+## Useful Commands
+- Analyze:
+  - `flutter analyze`
+- Debug build:
+  - `flutter build apk --debug`
+- Clean rebuild:
+  - `flutter clean`
+  - `flutter pub get`
+  - `flutter run`
 
-Option A (Firebase Console):
-1. Open Firebase Console -> Firestore Database -> Rules
-2. Copy/paste local `firestore.rules`
-3. Publish
+## Firestore Notes
+- Username login depends on the `usernames` collection/index.
+- League membership uses `leagues/{leagueId}/members/{uid}` as the main source of truth.
+- Current rules are shaped for the active mobile app flow and demo scoring support.
 
-Option B (Firebase CLI):
-1. Install and login:
-   - `npm i -g firebase-tools`
-   - `firebase login`
-2. In project root:
-   - `firebase use <your-firebase-project-id>`
-   - `firebase deploy --only firestore:rules`
-
-If rules are not deployed, league reads/writes fail with:
-- `[cloud/firestore/permission-denied]`
-
-## Next steps
-- Add Cloud Functions for scheduled result polling and scoring.
-- Add leaderboard aggregation UI from `leagueTotals` / `leagueScores`.
-- Add profile image upload UI (camera/gallery + Firebase Storage).
-- Add FCM token registration + deadline reminder dispatch.
+## Recommended Next Backend Step
+- Move scoring and scheduled result evaluation fully into Cloud Functions so score updates become server-authoritative.

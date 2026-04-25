@@ -1,6 +1,8 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:cloud_firestore/cloud_firestore.dart";
+import "../../../l10n/app_localizations.dart";
+import "../../../core/utils/app_error_text.dart";
 
 import "league_details_screen.dart";
 import "../providers/leagues_providers.dart";
@@ -11,54 +13,68 @@ class LeaguesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final leaguesAsync = ref.watch(userLeaguesProvider);
-    final actionState = ref.watch(leaguesControllerProvider);
-
-    ref.listen<AsyncValue<void>>(leaguesControllerProvider, (previous, next) {
-      next.whenOrNull(
-        error: (error, _) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(_friendlyError(error))),
-          );
-        },
-      );
-    });
 
     return Scaffold(
-      appBar: AppBar(title: const Text("My Leagues")),
+      appBar: AppBar(title: Text(l10n.leaguesTitle)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              "Compete with private friend leagues",
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 10),
             Card(
               child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: actionState.isLoading
-                            ? null
-                            : () => _showCreateLeagueDialog(context, ref),
-                        icon: const Icon(Icons.add),
-                        label: const Text("Create League"),
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          height: 44,
+                          width: 44,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primaryContainer,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            Icons.groups_rounded,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l10n.leaguesTitle,
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(l10n.leaguesSubtitle),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: actionState.isLoading
-                            ? null
-                            : () => _showJoinLeagueDialog(context, ref),
-                        icon: const Icon(Icons.group_add),
-                        label: const Text("Join League"),
-                      ),
+                    const SizedBox(height: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: () => _showCreateLeagueDialog(context, ref),
+                          icon: const Icon(Icons.add),
+                          label: Text(l10n.leaguesCreate),
+                        ),
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: () => _showJoinLeagueDialog(context, ref),
+                          icon: const Icon(Icons.group_add),
+                          label: Text(l10n.leaguesJoin),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -69,8 +85,28 @@ class LeaguesScreen extends ConsumerWidget {
               child: leaguesAsync.when(
                 data: (leagues) {
                   if (leagues.isEmpty) {
-                    return const Center(
-                      child: Text("No leagues yet. Create one or join with a code."),
+                    return Center(
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.emoji_flags_outlined,
+                                size: 42,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                l10n.leaguesEmpty,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodyLarge,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     );
                   }
                   return ListView.separated(
@@ -86,20 +122,8 @@ class LeaguesScreen extends ConsumerWidget {
                             : league.adminUserId),
                       );
                       return Card(
-                        child: ListTile(
-                          title: Text(league.name),
-                          subtitle: Text(
-                            "Admin $adminDisplay | Season ${league.seasonYear} | "
-                            "R${league.startRound}-R${league.endRound} | Members ${league.memberCount}",
-                          ),
-                          trailing: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Text(league.joinCode),
-                          ),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(20),
                           onTap: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
@@ -107,13 +131,55 @@ class LeaguesScreen extends ConsumerWidget {
                               ),
                             );
                           },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        league.name,
+                                        style: Theme.of(context).textTheme.titleMedium,
+                                      ),
+                                    ),
+                                    Chip(label: Text(league.joinCode)),
+                                  ],
+                                ),
+                                const SizedBox(height: 10),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    _LeagueMetaChip(
+                                      icon: Icons.verified_user_outlined,
+                                      label: "${l10n.leaguesAdmin} $adminDisplay",
+                                    ),
+                                    _LeagueMetaChip(
+                                      icon: Icons.calendar_month_outlined,
+                                      label: "${l10n.leaguesSeason} ${league.seasonYear}",
+                                    ),
+                                    _LeagueMetaChip(
+                                      icon: Icons.flag_outlined,
+                                      label: "R${league.startRound}-R${league.endRound}",
+                                    ),
+                                    _LeagueMetaChip(
+                                      icon: Icons.groups_2_outlined,
+                                      label: "${l10n.leaguesMembers} ${league.memberCount}",
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     },
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, _) => Center(child: Text("Failed to load leagues: ${_friendlyError(error)}")),
+                error: (error, _) => Center(child: Text(l10n.leaguesFailedLoad(_friendlyError(error, l10n)))),
               ),
             ),
           ],
@@ -122,17 +188,18 @@ class LeaguesScreen extends ConsumerWidget {
     );
   }
 
-  String _friendlyError(Object error) {
+  String _friendlyError(Object error, AppLocalizations l10n) {
     if (error is FirebaseException && error.code == "permission-denied") {
-      return "Firestore permission denied. Deploy firestore.rules, then restart the app.";
+      return l10n.leaguesPermissionDenied;
     }
     if (error is StateError) {
-      return error.message;
+      return AppErrorText.describe(l10n, error);
     }
-    return error.toString();
+    return AppErrorText.describe(l10n, error);
   }
 
   Future<void> _showCreateLeagueDialog(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     final currentSeasonYear = DateTime.now().year;
     var maxRound = 24;
     var nextRound = 1;
@@ -161,191 +228,246 @@ class LeaguesScreen extends ConsumerWidget {
     final submitted = await showDialog<bool>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Create League"),
-          content: Form(
-            key: formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: "League name"),
-                    validator: (value) => (value == null || value.trim().length < 3)
-                        ? "Enter at least 3 characters"
-                        : null,
+        var isSubmitting = false;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(l10n.leaguesCreateDialogTitle),
+              content: Form(
+                key: formKey,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextFormField(
+                        controller: nameController,
+                        decoration: InputDecoration(labelText: l10n.leaguesName),
+                        validator: (value) => (value == null || value.trim().length < 3)
+                            ? l10n.leaguesNameValidation
+                            : null,
+                      ),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: seasonController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(labelText: l10n.leaguesSeasonYear),
+                        validator: (value) => int.tryParse(value ?? "") == null ? l10n.leaguesInvalidYear : null,
+                      ),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: startRoundController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(labelText: l10n.leaguesStartRound),
+                        validator: (value) {
+                          final start = int.tryParse(value ?? "");
+                          if (start == null || start < 1) {
+                            return l10n.leaguesStartPositive;
+                          }
+                          if (start > maxRound) {
+                            return l10n.leaguesStartMax(maxRound);
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: endRoundController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(labelText: l10n.leaguesEndRound),
+                        validator: (value) {
+                          final end = int.tryParse(value ?? "");
+                          final start = int.tryParse(startRoundController.text);
+                          if (end == null || end < 1) {
+                            return l10n.leaguesEndPositive;
+                          }
+                          if (end > maxRound) {
+                            return l10n.leaguesEndMax(maxRound);
+                          }
+                          if (start != null && end < start) {
+                            return l10n.leaguesEndAfterStart;
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: seasonController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Season year"),
-                    validator: (value) => int.tryParse(value ?? "") == null ? "Invalid year" : null,
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: startRoundController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "Start round"),
-                    validator: (value) {
-                      final start = int.tryParse(value ?? "");
-                      if (start == null || start < 1) {
-                        return "Start round must be positive";
-                      }
-                      if (start > maxRound) {
-                        return "Start round must be <= $maxRound";
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    controller: endRoundController,
-                    keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: "End round"),
-                    validator: (value) {
-                      final end = int.tryParse(value ?? "");
-                      final start = int.tryParse(startRoundController.text);
-                      if (end == null || end < 1) {
-                        return "End round must be positive";
-                      }
-                      if (end > maxRound) {
-                        return "End round must be <= $maxRound";
-                      }
-                      if (start != null && end < start) {
-                        return "End round must be >= start round";
-                      }
-                      return null;
-                    },
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) {
-                  return;
-                }
-                final startRound = int.parse(startRoundController.text);
-                final endRound = int.parse(endRoundController.text);
-                if (startRound < 1 || endRound < 1 || startRound > maxRound || endRound > maxRound) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Rounds must be in range 1..$maxRound.")),
-                  );
-                  return;
-                }
-                if (endRound < startRound) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("End round must be >= start round.")),
-                  );
-                  return;
-                }
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
+                  child: Text(l10n.commonCancel),
+                ),
+                FilledButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
+                          final startRound = int.parse(startRoundController.text);
+                          final endRound = int.parse(endRoundController.text);
+                          if (startRound < 1 || endRound < 1 || startRound > maxRound || endRound > maxRound) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l10n.leaguesRoundsRange(maxRound))),
+                            );
+                            return;
+                          }
+                          if (endRound < startRound) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l10n.leaguesEndAfterStart)),
+                            );
+                            return;
+                          }
 
-                try {
-                  await ref.read(leaguesControllerProvider.notifier).createLeague(
-                        name: nameController.text.trim(),
-                        seasonYear: int.parse(seasonController.text),
-                        startRound: startRound,
-                        endRound: endRound,
-                      );
-                  if (context.mounted) {
-                    Navigator.of(context).pop(true);
-                  }
-                } catch (error) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(_friendlyError(error))),
-                    );
-                  }
-                }
-              },
-              child: const Text("Create"),
-            ),
-          ],
+                          setState(() => isSubmitting = true);
+                          try {
+                            await ref.read(leaguesControllerProvider.notifier).createLeague(
+                                  name: nameController.text.trim(),
+                                  seasonYear: int.parse(seasonController.text),
+                                  startRound: startRound,
+                                  endRound: endRound,
+                                );
+                            if (context.mounted) {
+                              Navigator.of(context).pop(true);
+                            }
+                          } catch (error) {
+                            if (context.mounted) {
+                              setState(() => isSubmitting = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(_friendlyError(error, l10n))),
+                              );
+                            }
+                          }
+                        },
+                  child: Text(l10n.commonCreate),
+                ),
+              ],
+            );
+          },
         );
       },
     );
 
+    nameController.dispose();
+    seasonController.dispose();
+    startRoundController.dispose();
+    endRoundController.dispose();
+
     if (context.mounted && submitted == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("League created.")),
+        SnackBar(content: Text(l10n.leaguesCreated)),
       );
     }
-
-    // Keep controllers undisposed here because dialog lifecycle/rebuild timing
-    // caused use-after-dispose assertions in error paths.
   }
 
   Future<void> _showJoinLeagueDialog(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
     final formKey = GlobalKey<FormState>();
     final codeController = TextEditingController();
 
     final submitted = await showDialog<bool>(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: const Text("Join League"),
-          content: Form(
-            key: formKey,
-            child: TextFormField(
-              controller: codeController,
-              textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(labelText: "Join code"),
-              validator: (value) => (value == null || value.trim().length < 4)
-                  ? "Enter a valid join code"
-                  : null,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text("Cancel"),
-            ),
-            FilledButton(
-              onPressed: () async {
-                if (!formKey.currentState!.validate()) {
-                  return;
-                }
-                try {
-                  final result = await ref.read(leaguesControllerProvider.notifier).joinLeagueByCode(
-                        joinCode: codeController.text.trim(),
-                      );
-                  if (context.mounted) {
-                    Navigator.of(context).pop(result.joined);
-                  }
-                } catch (error) {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(_friendlyError(error))),
-                    );
-                  }
-                }
-              },
-              child: const Text("Join"),
-            ),
-          ],
+        var isSubmitting = false;
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(l10n.leaguesJoinDialogTitle),
+              content: Form(
+                key: formKey,
+                child: TextFormField(
+                  controller: codeController,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: InputDecoration(labelText: l10n.leaguesJoinCode),
+                  validator: (value) => (value == null || value.trim().length < 4)
+                      ? l10n.leaguesJoinCodeValidation
+                      : null,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
+                  child: Text(l10n.commonCancel),
+                ),
+                FilledButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
+                          setState(() => isSubmitting = true);
+                          try {
+                            final result = await ref.read(leaguesControllerProvider.notifier).joinLeagueByCode(
+                                  joinCode: codeController.text.trim(),
+                                );
+                            if (context.mounted) {
+                              Navigator.of(context).pop(result.joined);
+                            }
+                          } catch (error) {
+                            if (context.mounted) {
+                              setState(() => isSubmitting = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(_friendlyError(error, l10n))),
+                              );
+                            }
+                          }
+                        },
+                  child: Text(l10n.commonJoin),
+                ),
+              ],
+            );
+          },
         );
       },
     );
 
+    codeController.dispose();
+
     if (context.mounted && submitted == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Joined league.")),
+        SnackBar(content: Text(l10n.leaguesJoined)),
       );
     }
     if (context.mounted && submitted == false) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Already joined. Duplicate join is not allowed.")),
+        SnackBar(content: Text(l10n.leaguesAlreadyJoined)),
       );
     }
+  }
+}
 
-    // Keep controller undisposed here for the same dialog timing reason.
+class _LeagueMetaChip extends StatelessWidget {
+  const _LeagueMetaChip({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
   }
 }

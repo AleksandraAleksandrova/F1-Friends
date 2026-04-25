@@ -1,6 +1,7 @@
 import "package:firebase_auth/firebase_auth.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "../../../l10n/app_localizations.dart";
 
 import "../../home/presentation/home_screen.dart";
 import "../providers/auth_providers.dart";
@@ -53,35 +54,35 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
-  String _humanizeError(Object error) {
+  String _humanizeError(AppLocalizations l10n, Object error) {
     if (error is FirebaseAuthException) {
       switch (error.code) {
         case "invalid-credential":
         case "wrong-password":
         case "user-not-found":
-          return "Invalid credentials. Please check your email and password.";
+          return l10n.authErrorInvalidCredentials;
         case "email-already-in-use":
-          return "This email is already registered.";
+          return l10n.authErrorEmailExists;
         case "too-many-requests":
-          return "Too many attempts. Please wait and try again.";
+          return l10n.authErrorTooManyRequests;
         case "network-request-failed":
-          return "Network error. Check your connection and try again.";
+          return l10n.authErrorNetwork;
         case "invalid-email":
-          return "Invalid email address.";
+          return l10n.authErrorInvalidEmail;
         default:
-          return "Authentication failed. Please try again.";
+          return l10n.authErrorGeneric;
       }
     }
     if (error is FirebaseException) {
       if (error.code == "permission-denied") {
-        return "Login by username is not available until Firestore rules are published.";
+        return l10n.authErrorUsernameLoginUnavailable;
       }
-      return "Authentication failed. Please try again.";
+      return l10n.authErrorGeneric;
     }
     if (error is StateError) {
       return error.message;
     }
-    return "Unexpected error. Please try again.";
+    return l10n.authErrorUnexpected;
   }
 
   bool _isValidEmail(String v) {
@@ -102,6 +103,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   Future<void> _showResetPasswordDialog() async {
+    final l10n = AppLocalizations.of(context)!;
     final emailController = TextEditingController(
       text: _isLoginMode ? _identifierController.text.trim() : _registerEmailController.text.trim(),
     );
@@ -110,20 +112,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final submitted = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Reset Password"),
+        title: Text(l10n.authResetPassword),
         content: Form(
           key: formKey,
           child: TextFormField(
             controller: emailController,
             keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(labelText: "Account email"),
-            validator: (value) => _isValidEmail(value ?? "") ? null : "Enter a valid email",
+            decoration: InputDecoration(labelText: l10n.authEmailOrUsername),
+            validator: (value) {
+              final v = value?.trim() ?? "";
+              if (v.length < 3) {
+                return l10n.authEnterEmailOrUsername;
+              }
+              if (!v.contains("@") && !_isValidUsername(v)) {
+                return l10n.authEnterEmailOrUsername;
+              }
+              if (v.contains("@") && !_isValidEmail(v)) {
+                return l10n.authEnterValidEmail;
+              }
+              return null;
+            },
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("Cancel"),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () async {
@@ -132,7 +146,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               }
               try {
                 await ref.read(authControllerProvider.notifier).sendPasswordResetEmail(
-                      email: emailController.text.trim(),
+                      identifier: emailController.text.trim(),
                     );
                 if (!context.mounted) {
                   return;
@@ -143,11 +157,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   return;
                 }
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(_humanizeError(error))),
+                  SnackBar(content: Text(_humanizeError(l10n, error))),
                 );
               }
             },
-            child: const Text("Send Link"),
+            child: Text(l10n.authSendLink),
           ),
         ],
       ),
@@ -155,19 +169,20 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     if (submitted == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Password reset link sent to email.")),
+        SnackBar(content: Text(l10n.authPasswordResetSent)),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(authControllerProvider);
     final authUserId = ref.watch(authUserIdProvider);
 
     ref.listen<AsyncValue<void>>(authControllerProvider, (previous, next) {
       next.whenOrNull(
-        error: (error, _) => setState(() => _authError = _humanizeError(error)),
+        error: (error, _) => setState(() => _authError = _humanizeError(l10n, error)),
       );
     });
 
@@ -203,14 +218,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              "F1 Friends",
+                              l10n.appTitle,
                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                     fontWeight: FontWeight.w800,
                                   ),
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              _isLoginMode ? "Sign In" : "Create Account",
+                              _isLoginMode ? l10n.authSignIn : l10n.authCreateAccount,
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             if (_authError != null) ...[
@@ -235,11 +250,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               TextFormField(
                                 controller: _identifierController,
                                 keyboardType: TextInputType.emailAddress,
-                                decoration: const InputDecoration(labelText: "Email or Username"),
+                                decoration: InputDecoration(labelText: l10n.authEmailOrUsername),
                                 validator: (value) {
                                   final v = value?.trim() ?? "";
                                   if (v.length < 3) {
-                                    return "Enter email or username";
+                                    return l10n.authEnterEmailOrUsername;
                                   }
                                   return null;
                                 },
@@ -247,10 +262,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             else ...[
                               TextFormField(
                                 controller: _usernameController,
-                                decoration: const InputDecoration(labelText: "Username"),
+                                decoration: InputDecoration(labelText: l10n.authUsername),
                                 validator: (value) {
                                   if (!_isValidUsername(value ?? "")) {
-                                    return "Username: 3+ chars, letters/numbers/_ only";
+                                    return l10n.authUsernameValidation;
                                   }
                                   return null;
                                 },
@@ -259,11 +274,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               TextFormField(
                                 controller: _registerEmailController,
                                 keyboardType: TextInputType.emailAddress,
-                                decoration: const InputDecoration(labelText: "Email"),
+                                decoration: InputDecoration(labelText: l10n.authEmail),
                                 validator: (value) {
                                   final v = value ?? "";
                                   if (!_isValidEmail(v)) {
-                                    return "Enter a valid email";
+                                    return l10n.authEnterValidEmail;
                                   }
                                   return null;
                                 },
@@ -273,16 +288,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                             TextFormField(
                               controller: _passwordController,
                               obscureText: true,
-                              decoration: const InputDecoration(labelText: "Password"),
+                              decoration: InputDecoration(labelText: l10n.authPassword),
                               validator: (value) {
                                 final v = value ?? "";
                                 if (v.length < 6) {
-                                  return "Password must be at least 6 characters";
+                                  return l10n.authPasswordMin;
                                 }
                                 if (!_isLoginMode &&
                                     (!RegExp(r"[A-Za-z]").hasMatch(v) ||
                                         !RegExp(r"\d").hasMatch(v))) {
-                                  return "Password must include at least one letter and one number";
+                                  return l10n.authPasswordRule;
                                 }
                                 return null;
                               },
@@ -292,7 +307,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                               width: double.infinity,
                               child: FilledButton(
                                 onPressed: authState.isLoading ? null : _submit,
-                                child: Text(_isLoginMode ? "Sign In" : "Register"),
+                                child: Text(_isLoginMode ? l10n.authSignIn : l10n.authRegister),
                               ),
                             ),
                             if (_isLoginMode)
@@ -300,7 +315,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                 alignment: Alignment.centerRight,
                                 child: TextButton(
                                   onPressed: authState.isLoading ? null : _showResetPasswordDialog,
-                                  child: const Text("Forgot password?"),
+                                  child: Text(l10n.authForgotPassword),
                                 ),
                               ),
                             const SizedBox(height: 8),
@@ -313,8 +328,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                                       }),
                               child: Text(
                                 _isLoginMode
-                                    ? "Need an account? Register"
-                                    : "Have an account? Sign In",
+                                    ? l10n.authNeedAccount
+                                    : l10n.authHaveAccount,
                               ),
                             ),
                           ],
@@ -328,7 +343,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => Center(child: Text("Auth state error: $error")),
+        error: (error, _) => Center(child: Text(_humanizeError(l10n, error))),
       ),
     );
   }

@@ -151,11 +151,24 @@ final usernameByUserIdProvider = FutureProvider.family<String, String>((ref, uid
     return uid.length > 6 ? uid.substring(0, 6) : uid;
   }
   final firestore = ref.watch(firebaseFirestoreProvider);
-  final doc = await firestore.doc(FirestorePaths.user(uid)).get();
-  final data = doc.data();
-  final username = data?["username"] as String?;
-  if (username != null && username.trim().isNotEmpty) {
-    return username.trim();
+  if (uid == currentUid) {
+    final selfDoc = await firestore.doc(FirestorePaths.user(uid)).get();
+    final selfUsername = selfDoc.data()?["username"] as String?;
+    if (selfUsername != null && selfUsername.trim().isNotEmpty) {
+      return selfUsername.trim();
+    }
+  }
+
+  final usernameSnap = await firestore
+      .collection(FirestorePaths.usernames)
+      .where("uid", isEqualTo: uid)
+      .limit(1)
+      .get();
+  if (usernameSnap.docs.isNotEmpty) {
+    final username = usernameSnap.docs.first.data()["username"] as String?;
+    if (username != null && username.trim().isNotEmpty) {
+      return username.trim();
+    }
   }
   return uid.length > 6 ? uid.substring(0, 6) : uid;
 });

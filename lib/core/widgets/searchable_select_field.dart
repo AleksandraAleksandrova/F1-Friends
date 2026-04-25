@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "../../l10n/app_localizations.dart";
 
 class SearchableSelectItem {
   const SearchableSelectItem({
@@ -30,13 +31,14 @@ class SearchableSelectField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedLabel = items
-        .where((it) => it.value == selectedValue)
-        .map((it) => it.label)
-        .firstWhere(
-          (value) => true,
-          orElse: () => "",
-        );
+    final l10n = AppLocalizations.of(context)!;
+    String selectedLabel = "";
+    for (final item in items) {
+      if (item.value == selectedValue) {
+        selectedLabel = item.label;
+        break;
+      }
+    }
 
     return RawAutocomplete<SearchableSelectItem>(
       key: ValueKey("$label-$selectedValue-${items.length}"),
@@ -47,7 +49,11 @@ class SearchableSelectField extends StatelessWidget {
         if (query.isEmpty) {
           return items;
         }
-        return items.where((option) => option.label.toLowerCase().contains(query));
+        return items.where(
+          (option) =>
+              option.label.toLowerCase().contains(query) ||
+              option.value.toLowerCase().contains(query),
+        );
       },
       onSelected: (option) => onChanged(option.value),
       fieldViewBuilder: (context, textController, focusNode, onFieldSubmitted) {
@@ -57,7 +63,7 @@ class SearchableSelectField extends StatelessWidget {
           onChanged: (_) => onChanged(null),
           decoration: InputDecoration(
             labelText: label,
-            hintText: hintText ?? "Type to filter",
+            hintText: hintText ?? l10n.commonSearchHint,
           ),
         );
       },

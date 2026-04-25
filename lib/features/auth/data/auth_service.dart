@@ -12,7 +12,7 @@ abstract class AuthService {
   });
 
   Future<void> sendPasswordResetEmail({
-    required String email,
+    required String identifier,
   });
 
   Future<void> signOut();

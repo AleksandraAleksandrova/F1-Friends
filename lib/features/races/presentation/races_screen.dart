@@ -1,5 +1,8 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "../../../l10n/app_localizations.dart";
+import "package:intl/intl.dart";
+import "../../../core/utils/app_error_text.dart";
 
 import "../../predictions/presentation/prediction_dialog.dart";
 import "../../predictions/providers/predictions_providers.dart";
@@ -12,11 +15,12 @@ class RacesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final raceHubAsync = ref.watch(raceHubProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Races"),
+        title: Text(l10n.racesTitle),
         actions: [
           IconButton(
             onPressed: () => ref.invalidate(raceHubProvider),
@@ -29,31 +33,67 @@ class RacesScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        height: 44,
+                        width: 44,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(
+                          Icons.flag_circle_outlined,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.racesTitle,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(l10n.racesCurrentSeasonRounds),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               _SectionCard(
-                title: "Next Race",
+                title: l10n.racesNextRace,
                 child: hub.nextRace == null
-                    ? const Text("No upcoming race returned by API.")
+                    ? Text(l10n.racesNoUpcoming)
                     : _RaceTile(race: hub.nextRace!),
               ),
               const SizedBox(height: 12),
               _SectionCard(
-                title: "Last Race",
+                title: l10n.racesLastRace,
                 child: hub.lastRace == null
-                    ? const Text("No last race details returned by API.")
+                    ? Text(l10n.racesNoLast)
                     : _RaceTile(race: hub.lastRace!),
               ),
               const SizedBox(height: 12),
               _SectionCard(
-                title: "Latest Results",
+                title: l10n.racesLatestResults,
                 child: hub.latestResults == null
-                    ? const Text("No result data available.")
+                    ? Text(l10n.racesNoResults)
                     : _LatestResultsView(summary: hub.latestResults!),
               ),
               const SizedBox(height: 12),
               _SectionCard(
-                title: "Current Season Rounds",
+                title: l10n.racesCurrentSeasonRounds,
                 child: hub.seasonRaces.isEmpty
-                    ? const Text("No races found for current season.")
+                    ? Text(l10n.racesNoSeasonRaces)
                     : Column(
                         children: hub.seasonRaces
                             .map((race) => _RacePredictionRow(race: race))
@@ -67,37 +107,27 @@ class RacesScreen extends ConsumerWidget {
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text("Failed to load API race data: $error"),
+            child: Text(l10n.racesFailedLoadApi(AppErrorText.describe(l10n, error))),
           ),
         ),
       ),
     );
   }
 
-  static String formatUtc(DateTime dt) {
-    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    ];
+  static String formatUtc(BuildContext context, DateTime dt) {
     final local = dt.toLocal();
-    final weekday = weekdays[local.weekday - 1];
-    final month = months[local.month - 1];
-    final hh = local.hour.toString().padLeft(2, "0");
-    final mm = local.minute.toString().padLeft(2, "0");
-    return "$weekday, ${local.day} $month at $hh:$mm";
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final date = DateFormat("EEE, d MMM", locale).format(local);
+    final time = DateFormat("HH:mm", locale).format(local);
+    return "$date at $time";
   }
 
-  static String formatUtcAround(DateTime dt) {
+  static String formatUtcAround(BuildContext context, DateTime dt) {
     final rounded = _roundUpToFive(dt.toLocal());
-    const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const months = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    ];
-    final weekday = weekdays[rounded.weekday - 1];
-    final month = months[rounded.month - 1];
-    final hh = rounded.hour.toString().padLeft(2, "0");
-    final mm = rounded.minute.toString().padLeft(2, "0");
-    return "$weekday, ${rounded.day} $month around $hh:$mm";
+    final locale = Localizations.localeOf(context).toLanguageTag();
+    final date = DateFormat("EEE, d MMM", locale).format(rounded);
+    final time = DateFormat("HH:mm", locale).format(rounded);
+    return "$date around $time";
   }
 
   static DateTime _roundUpToFive(DateTime dt) {
@@ -123,49 +153,78 @@ class _RacePredictionRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final lockAt = PredictionDialog.lockAtUtc(race);
     final isLocked = !DateTime.now().toUtc().isBefore(lockAt);
     final existingPredictionAsync = ref.watch(predictionForRaceProvider(race.id));
 
     final buttonLabel = isLocked
-        ? "Locked"
+        ? l10n.racesLocked
         : existingPredictionAsync.maybeWhen(
-            data: (p) => p == null ? "Predict" : "Update",
-            orElse: () => "Predict",
+            data: (p) => p == null ? l10n.racesPredict : l10n.commonUpdate,
+            orElse: () => l10n.racesPredict,
           );
 
-    return ListTile(
-      dense: true,
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        radius: 14,
-        child: Text("${race.round}"),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
       ),
-      title: Text(race.raceName),
-      subtitle: Text(
-        "${RacesScreen.formatUtc(race.startTimeUtc)}\n"
-        "Lock: ${RacesScreen.formatUtc(lockAt)}",
-      ),
-      isThreeLine: true,
-      trailing: OutlinedButton(
-        onPressed: isLocked
-            ? null
-            : () async {
-                final saved = await PredictionDialog.show(
-                  context: context,
-                  ref: ref,
-                  race: race,
-                );
-                if (saved) {
-                  ref.invalidate(predictionForRaceProvider(race.id));
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Prediction saved.")),
-                    );
-                  }
-                }
-              },
-        child: Text(buttonLabel),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: Theme.of(context).colorScheme.secondaryContainer,
+                child: Text(
+                  "${race.round}",
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 180,
+                child: Text(
+                  race.raceName,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+              ),
+              OutlinedButton(
+                onPressed: isLocked
+                    ? null
+                    : () async {
+                        final saved = await PredictionDialog.show(
+                          context: context,
+                          ref: ref,
+                          race: race,
+                        );
+                        if (saved) {
+                          ref.invalidate(predictionForRaceProvider(race.id));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(l10n.racesPredictionSaved)),
+                            );
+                          }
+                        }
+                      },
+                child: Text(buttonLabel),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(RacesScreen.formatUtc(context, race.startTimeUtc)),
+          const SizedBox(height: 2),
+          Text(l10n.racesLock(RacesScreen.formatUtc(context, lockAt))),
+        ],
       ),
     );
   }
@@ -181,18 +240,32 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Icon(Icons.speed, size: 18),
-                const SizedBox(width: 8),
-                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                Container(
+                  height: 34,
+                  width: 34,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    Icons.speed,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+                ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             child,
           ],
         ),
@@ -208,17 +281,18 @@ class _RaceTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(race.raceName, style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 4),
-        Text("Round ${race.round}, Season ${race.seasonYear}"),
+        Text(l10n.racesRoundSeason(race.round, race.seasonYear)),
         const SizedBox(height: 4),
-        Text("Race start: ${RacesScreen.formatUtc(race.startTimeUtc)}"),
-        Text("Expected end: ${RacesScreen.formatUtcAround(race.expectedEndTimeUtc)}"),
+        Text(l10n.racesRaceStart(RacesScreen.formatUtc(context, race.startTimeUtc))),
+        Text(l10n.racesExpectedEnd(RacesScreen.formatUtcAround(context, race.expectedEndTimeUtc))),
         if (race.qualifyingStartUtc != null)
-          Text("Qualy start: ${RacesScreen.formatUtc(race.qualifyingStartUtc!)}"),
+          Text(l10n.racesQualyStart(RacesScreen.formatUtc(context, race.qualifyingStartUtc!))),
       ],
     );
   }
@@ -231,26 +305,27 @@ class _LatestResultsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(summary.raceName, style: Theme.of(context).textTheme.titleSmall),
         const SizedBox(height: 4),
-        Text("Round ${summary.round} (${summary.seasonYear})"),
+        Text(l10n.racesRoundSeason(summary.round, summary.seasonYear)),
         const SizedBox(height: 8),
         ...summary.podium.map((entry) {
           return Text("${entry.position}. ${entry.shortName}  ${entry.fullName}");
         }),
         const SizedBox(height: 8),
-        Text("Fastest lap: ${_driverLabel(summary.fastestLapDriverId)}"),
-        Text("DNFs: ${summary.dnfCount ?? 0}"),
+        Text(l10n.racesFastestLap(_driverLabel(context, summary.fastestLapDriverId))),
+        Text(l10n.racesDnfs(summary.dnfCount ?? 0)),
       ],
     );
   }
 
-  String _driverLabel(String? id) {
+  String _driverLabel(BuildContext context, String? id) {
     if (id == null || id.isEmpty) {
-      return "n/a";
+      return AppLocalizations.of(context)!.commonUnknown;
     }
     final pretty = id
         .split("_")

@@ -1,3 +1,4 @@
+import "dart:async";
 import "dart:convert";
 
 import "package:http/http.dart" as http;
@@ -14,80 +15,54 @@ class HttpF1ApiService implements F1ApiService {
 
   @override
   Future<RaceWeekend?> fetchNextRace() async {
-    final jsonMap = await _getJson("$_base/current/next");
-    final race = _extractSingleRaceFromRaceArrayResponse(jsonMap);
-    if (race == null) {
-      return null;
+    final seasonYear = DateTime.now().year;
+    final races = await fetchRacesBySeason(seasonYear);
+    final now = DateTime.now().toUtc();
+    for (final race in races) {
+      if (race.startTimeUtc.isAfter(now)) {
+        return race;
+      }
     }
-    return _toRaceWeekend(race, (jsonMap["season"] as num?)?.toInt());
+    return races.isEmpty ? null : races.first;
   }
 
   @override
   Future<RaceWeekend?> fetchLastRaceDetails() async {
-    final jsonMap = await _getJson("$_base/current/last");
-    final race = _extractSingleRaceFromRaceArrayResponse(jsonMap);
-    if (race == null) {
-      return null;
+    final seasonYear = DateTime.now().year;
+    final races = await fetchRacesBySeason(seasonYear);
+    final now = DateTime.now().toUtc();
+
+    RaceWeekend? latestPastRace;
+    for (final race in races) {
+      if (!race.startTimeUtc.isAfter(now)) {
+        latestPastRace = race;
+      }
     }
-    return _toRaceWeekend(race, (jsonMap["season"] as num?)?.toInt());
+    return latestPastRace ?? (races.isEmpty ? null : races.last);
   }
 
   @override
   Future<LatestRaceSummary?> fetchLatestRaceResults() async {
-    final jsonMap = await _getJson("$_base/current/last/race");
-    final race = jsonMap["races"];
-    if (race is! Map<String, dynamic>) {
-      return null;
-    }
-
-    final season = (jsonMap["season"] as num?)?.toInt() ?? DateTime.now().year;
-    final round = (race["round"] as num?)?.toInt() ?? 0;
-    final raceName = (race["raceName"] as String?) ?? "Unknown race";
-    final raceDate = race["date"] as String?;
-    final raceTime = race["time"] as String?;
-    final raceStartUtc = _parseDateTimeUtc(raceDate, raceTime) ?? DateTime.now().toUtc();
-
-    final results = (race["results"] as List?)?.cast<Map<String, dynamic>>() ?? const [];
-    final top3 = results
-        .where((r) => ((r["position"] as num?)?.toInt() ?? 999) <= 3)
-        .toList()
-      ..sort((a, b) => ((a["position"] as num?)?.toInt() ?? 999).compareTo((b["position"] as num?)?.toInt() ?? 999));
-
-    final podium = top3.map((entry) {
-      final driver = (entry["driver"] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
-      final name = (driver["name"] as String?) ?? "";
-      final surname = (driver["surname"] as String?) ?? "";
-      return PodiumEntry(
-        position: (entry["position"] as num?)?.toInt() ?? 0,
-        driverId: (driver["driverId"] as String?) ?? "",
-        shortName: (driver["shortName"] as String?) ?? "",
-        fullName: "$name $surname".trim(),
-      );
-    }).toList();
-
-    String? fastestLapDriverId;
-    int dnfCount = 0;
-    for (final row in results) {
-      final fastLap = row["fastLap"];
-      if (fastLap is String && fastLap.isNotEmpty) {
-        final driver = (row["driver"] as Map?)?.cast<String, dynamic>();
-        fastestLapDriverId = driver?["driverId"] as String?;
+    try {
+      final jsonMap = await _getJson("$_base/current/last/race");
+      return _latestRaceSummaryFromCurrentLastRace(jsonMap);
+    } catch (_) {
+      final lastRace = await fetchLastRaceDetails();
+      if (lastRace == null) {
+        return null;
       }
-      final retired = row["retired"];
-      if (retired != null && retired.toString().trim().isNotEmpty) {
-        dnfCount += 1;
+      try {
+        final jsonMap = await _getJson("$_base/${lastRace.seasonYear}/${lastRace.round}/race");
+        return _latestRaceSummaryFromRoundRace(
+          jsonMap: jsonMap,
+          fallbackSeasonYear: lastRace.seasonYear,
+          fallbackRound: lastRace.round,
+          fallbackRace: lastRace,
+        );
+      } catch (_) {
+        return null;
       }
     }
-
-    return LatestRaceSummary(
-      seasonYear: season,
-      round: round,
-      raceName: raceName,
-      raceStartUtc: raceStartUtc,
-      podium: podium,
-      fastestLapDriverId: fastestLapDriverId,
-      dnfCount: dnfCount,
-    );
   }
 
   @override
@@ -138,27 +113,30 @@ class HttpF1ApiService implements F1ApiService {
   }
 
   Future<Map<String, dynamic>> _getJson(String url) async {
-    final response = await _client.get(Uri.parse(url));
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw StateError("F1 API request failed (${response.statusCode}) for $url");
+    Object? lastError;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final response = await _client.get(Uri.parse(url)).timeout(const Duration(seconds: 12));
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          throw StateError("F1 API request failed (${response.statusCode}) for $url");
+        }
+        final decoded = jsonDecode(response.body);
+        if (decoded is! Map<String, dynamic>) {
+          throw StateError("Unexpected F1 API response shape.");
+        }
+        return decoded;
+      } catch (error) {
+        lastError = error;
+      }
     }
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map<String, dynamic>) {
-      throw StateError("Unexpected F1 API response shape.");
-    }
-    return decoded;
-  }
 
-  Map<String, dynamic>? _extractSingleRaceFromRaceArrayResponse(Map<String, dynamic> jsonMap) {
-    final raceArray = jsonMap["race"];
-    if (raceArray is! List || raceArray.isEmpty) {
-      return null;
+    if (lastError is TimeoutException) {
+      throw StateError("F1 API request timed out.");
     }
-    final first = raceArray.first;
-    if (first is! Map<String, dynamic>) {
-      return null;
+    if (lastError != null) {
+      throw lastError;
     }
-    return first;
+    throw StateError("F1 API request failed.");
   }
 
   RaceWeekend? _toRaceWeekend(Map<String, dynamic> race, int? seasonYearFromResponse) {
@@ -190,5 +168,97 @@ class HttpF1ApiService implements F1ApiService {
       return null;
     }
     return DateTime.tryParse("${date}T$time")?.toUtc();
+  }
+
+  LatestRaceSummary? _latestRaceSummaryFromCurrentLastRace(Map<String, dynamic> jsonMap) {
+    final race = jsonMap["races"];
+    if (race is! Map<String, dynamic>) {
+      return null;
+    }
+    return _latestRaceSummaryFromRaceMap(
+      race,
+      fallbackSeasonYear: (jsonMap["season"] as num?)?.toInt() ?? DateTime.now().year,
+      fallbackRound: (race["round"] as num?)?.toInt() ?? 0,
+      fallbackRace: null,
+    );
+  }
+
+  LatestRaceSummary? _latestRaceSummaryFromRoundRace({
+    required Map<String, dynamic> jsonMap,
+    required int fallbackSeasonYear,
+    required int fallbackRound,
+    required RaceWeekend fallbackRace,
+  }) {
+    final race = jsonMap["race"];
+    if (race is! Map<String, dynamic>) {
+      return null;
+    }
+    return _latestRaceSummaryFromRaceMap(
+      race,
+      fallbackSeasonYear: fallbackSeasonYear,
+      fallbackRound: fallbackRound,
+      fallbackRace: fallbackRace,
+    );
+  }
+
+  LatestRaceSummary? _latestRaceSummaryFromRaceMap(
+    Map<String, dynamic> race, {
+    required int fallbackSeasonYear,
+    required int fallbackRound,
+    required RaceWeekend? fallbackRace,
+  }) {
+    final results = (race["results"] as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    if (results.isEmpty) {
+      return null;
+    }
+
+    final season = (race["season"] as num?)?.toInt() ?? fallbackSeasonYear;
+    final round = (race["round"] as num?)?.toInt() ?? fallbackRound;
+    final raceName = (race["raceName"] as String?) ?? fallbackRace?.raceName ?? "Unknown race";
+
+    final raceDate = race["date"] as String?;
+    final raceTime = race["time"] as String?;
+    final raceStartUtc = _parseDateTimeUtc(raceDate, raceTime) ?? fallbackRace?.startTimeUtc ?? DateTime.now().toUtc();
+
+    final top3 = results
+        .where((r) => ((r["position"] as num?)?.toInt() ?? 999) <= 3)
+        .toList()
+      ..sort((a, b) => ((a["position"] as num?)?.toInt() ?? 999).compareTo((b["position"] as num?)?.toInt() ?? 999));
+
+    final podium = top3.map((entry) {
+      final driver = (entry["driver"] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
+      final name = (driver["name"] as String?) ?? "";
+      final surname = (driver["surname"] as String?) ?? "";
+      return PodiumEntry(
+        position: (entry["position"] as num?)?.toInt() ?? 0,
+        driverId: (driver["driverId"] as String?) ?? "",
+        shortName: (driver["shortName"] as String?) ?? "",
+        fullName: "$name $surname".trim(),
+      );
+    }).toList();
+
+    String? fastestLapDriverId;
+    int dnfCount = 0;
+    for (final row in results) {
+      final fastLap = row["fastLap"];
+      if (fastLap is String && fastLap.isNotEmpty) {
+        final driver = (row["driver"] as Map?)?.cast<String, dynamic>();
+        fastestLapDriverId = driver?["driverId"] as String?;
+      }
+      final retired = row["retired"];
+      if (retired != null && retired.toString().trim().isNotEmpty) {
+        dnfCount += 1;
+      }
+    }
+
+    return LatestRaceSummary(
+      seasonYear: season,
+      round: round,
+      raceName: raceName,
+      raceStartUtc: raceStartUtc,
+      podium: podium,
+      fastestLapDriverId: fastestLapDriverId,
+      dnfCount: dnfCount,
+    );
   }
 }

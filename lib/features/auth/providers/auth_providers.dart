@@ -23,8 +23,10 @@ final authUserIdProvider = StreamProvider<String?>((ref) {
 class AuthController extends StateNotifier<AsyncValue<void>> {
   final AuthService _authService;
   final FirebaseFirestore _firestore;
+  final FirebaseAuth _firebaseAuth;
 
-  AuthController(this._authService, this._firestore) : super(const AsyncData(null));
+  AuthController(this._authService, this._firestore, this._firebaseAuth)
+      : super(const AsyncData(null));
 
   Future<void> signIn({required String identifier, required String password}) async {
     state = const AsyncLoading();
@@ -40,27 +42,40 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
+      final trimmed = username.trim();
+      final usernameLower = trimmed.toLowerCase();
+      final usernameIndexRef = _firestore.doc(FirestorePaths.usernameIndex(usernameLower));
+      final existingUsername = await usernameIndexRef.get();
+      final existingUid = (existingUsername.data()?["uid"] as String?)?.trim();
+      if (existingUsername.exists && existingUid?.isNotEmpty == true) {
+        throw StateError("Username is already taken.");
+      }
+
       await _authService.registerWithEmailPassword(email: email, password: password);
-      final uid = FirebaseAuth.instance.currentUser?.uid;
+      final uid = _firebaseAuth.currentUser?.uid;
       if (uid != null) {
-        final trimmed = username.trim();
-        final usernameLower = trimmed.toLowerCase();
-        await _firestore.collection("users").doc(uid).set({
-          "email": email.trim(),
-          "username": trimmed,
-          "usernameLower": usernameLower,
-          "displayName": trimmed,
-          "profileImageUrl": null,
-          "joinedLeagueIds": <String>[],
-          "createdAt": FieldValue.serverTimestamp(),
-          "updatedAt": FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-        await _firestore.doc(FirestorePaths.usernameIndex(usernameLower)).set({
-          "uid": uid,
-          "email": email.trim(),
-          "username": trimmed,
-          "updatedAt": FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        try {
+          final batch = _firestore.batch();
+          batch.set(_firestore.collection(FirestorePaths.users).doc(uid), {
+            "email": email.trim(),
+            "username": trimmed,
+            "usernameLower": usernameLower,
+            "displayName": trimmed,
+            "profileImageUrl": null,
+            "createdAt": FieldValue.serverTimestamp(),
+            "updatedAt": FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          batch.set(usernameIndexRef, {
+            "uid": uid,
+            "email": email.trim(),
+            "username": trimmed,
+            "updatedAt": FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+          await batch.commit();
+        } catch (_) {
+          await _firebaseAuth.currentUser?.delete();
+          rethrow;
+        }
       }
     });
   }
@@ -70,10 +85,10 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
     state = await AsyncValue.guard(_authService.signOut);
   }
 
-  Future<void> sendPasswordResetEmail({required String email}) async {
+  Future<void> sendPasswordResetEmail({required String identifier}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(
-      () => _authService.sendPasswordResetEmail(email: email),
+      () => _authService.sendPasswordResetEmail(identifier: identifier),
     );
   }
 }
@@ -81,5 +96,9 @@ class AuthController extends StateNotifier<AsyncValue<void>> {
 final authControllerProvider =
     StateNotifierProvider<AuthController, AsyncValue<void>>((ref) {
   final authService = ref.watch(authServiceProvider);
-  return AuthController(authService, FirebaseFirestore.instance);
+  return AuthController(
+    authService,
+    FirebaseFirestore.instance,
+    ref.watch(firebaseAuthProvider),
+  );
 });

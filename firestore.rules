@@ -10,41 +10,90 @@ service cloud.firestore {
         get(/databases/$(database)/documents/leagues/$(leagueId)).data.adminUserId == request.auth.uid;
     }
 
+    function isLeagueMember(leagueId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/leagues/$(leagueId)/members/$(request.auth.uid));
+    }
+
+    function isSelfJoinLeagueUpdate(leagueId) {
+      return signedIn() &&
+        request.resource.data.adminUserId == resource.data.adminUserId &&
+        request.resource.data.joinCode == resource.data.joinCode &&
+        request.resource.data.name == resource.data.name &&
+        request.resource.data.seasonYear == resource.data.seasonYear &&
+        request.resource.data.startRound == resource.data.startRound &&
+        request.resource.data.endRound == resource.data.endRound &&
+        request.resource.data.scoringLocked == resource.data.scoringLocked &&
+        request.resource.data.scoringRules == resource.data.scoringRules &&
+        request.resource.data.memberCount == resource.data.memberCount + 1 &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "memberCount",
+          "updatedAt",
+        ]) &&
+        existsAfter(/databases/$(database)/documents/leagues/$(leagueId)/members/$(request.auth.uid));
+    }
+
     match /users/{uid} {
-      // Public read needed for username -> email lookup at login.
-      allow read: if true;
+      allow read: if signedIn() && request.auth.uid == uid;
       allow create, update, delete: if signedIn() && request.auth.uid == uid;
     }
 
     match /usernames/{usernameLower} {
       allow read: if true;
-      allow create, update, delete: if signedIn();
+      allow create: if signedIn() &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.username is string &&
+        request.resource.data.email is string;
+      allow update: if signedIn() &&
+        resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid &&
+        request.resource.data.username is string &&
+        request.resource.data.email is string;
+      allow delete: if signedIn() &&
+        resource.data.uid == request.auth.uid;
     }
  
     match /leagues/{leagueId} {
       allow read: if signedIn();
       allow create: if signedIn() &&
         request.resource.data.adminUserId == request.auth.uid;
-      allow update: if signedIn();
+      allow update: if isLeagueAdmin(leagueId) || isSelfJoinLeagueUpdate(leagueId);
       allow delete: if isLeagueAdmin(leagueId);
     }
 
     match /leagues/{leagueId}/members/{memberId} {
       allow read: if signedIn();
-      allow create, update: if signedIn();
+      allow create: if signedIn() &&
+        request.resource.data.userId == request.auth.uid &&
+        memberId == request.auth.uid;
+      allow update: if isLeagueAdmin(leagueId) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.joinedAt == resource.data.joinedAt &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "racePoints",
+          "totalPoints",
+          "updatedAt",
+        ]);
       allow delete: if isLeagueAdmin(leagueId);
     }
 
     match /leagueJoinCodes/{joinCode} {
       allow read: if signedIn();
       allow create: if signedIn();
-      allow update, delete: if signedIn();
+      allow update: if false;
+      allow delete: if signedIn() &&
+        get(/databases/$(database)/documents/leagues/$(resource.data.leagueId)).data.adminUserId == request.auth.uid;
     }
 
     match /predictions/{predictionId} {
       allow read: if signedIn();
-      allow create, update: if signedIn() &&
+      allow create: if signedIn() &&
         request.resource.data.userId == request.auth.uid;
+      allow update: if signedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.raceId == resource.data.raceId;
       allow delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
 
@@ -68,11 +117,8 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Demo mode: allow authenticated read visibility across the app to avoid
-    // brittle query denials while features are still being built.
     match /{document=**} {
-      allow read: if signedIn();
-      allow write: if false;
+      allow read, write: if false;
     }
   }
 }

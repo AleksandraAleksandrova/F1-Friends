@@ -1,3 +1,5 @@
+import "dart:async";
+
 import "package:firebase_core/firebase_core.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
@@ -17,6 +19,11 @@ Future<void> main() async {
     }
     Firebase.app();
   }
-  await LocalNotificationService.initialize();
   runApp(const ProviderScope(child: F1FriendsApp()));
+  unawaited(
+    LocalNotificationService.initialize(
+      channelName: "Prediction Reminders",
+      channelDescription: "Reminders to submit race predictions",
+    ),
+  );
 }

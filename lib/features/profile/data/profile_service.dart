@@ -15,6 +15,11 @@ abstract class ProfileService {
     required String username,
   });
 
+  Future<void> updatePreferredLanguage({
+    required String uid,
+    required String languageCode,
+  });
+
   Future<void> updateProfileImage({
     required String uid,
     required ImageSource source,

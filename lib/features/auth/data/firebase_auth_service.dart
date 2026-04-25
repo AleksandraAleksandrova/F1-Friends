@@ -40,9 +40,10 @@ class FirebaseAuthService implements AuthService {
 
   @override
   Future<void> sendPasswordResetEmail({
-    required String email,
+    required String identifier,
   }) async {
-    await _firebaseAuth.sendPasswordResetEmail(email: email);
+    final resolvedEmail = await _resolveEmail(identifier.trim());
+    await _firebaseAuth.sendPasswordResetEmail(email: resolvedEmail);
   }
 
   @override
@@ -62,52 +63,6 @@ class FirebaseAuthService implements AuthService {
       final email = usernameDoc.data()?["email"] as String?;
       if (email != null && email.trim().isNotEmpty) {
         return email.trim();
-      }
-      final uid = usernameDoc.data()?["uid"] as String?;
-      if (uid != null && uid.isNotEmpty) {
-        final userDoc = await _firestore.doc(FirestorePaths.user(uid)).get();
-        final userEmail = userDoc.data()?["email"] as String?;
-        if (userEmail != null && userEmail.trim().isNotEmpty) {
-          return userEmail.trim();
-        }
-      }
-    }
-
-    final byLower = await _firestore
-        .collection(FirestorePaths.users)
-        .where("usernameLower", isEqualTo: normalized)
-        .limit(1)
-        .get();
-    if (byLower.docs.isNotEmpty) {
-      final email = byLower.docs.first.data()["email"] as String?;
-      if (email != null && email.isNotEmpty) {
-        return email;
-      }
-    }
-
-    final byExact = await _firestore
-        .collection(FirestorePaths.users)
-        .where("username", isEqualTo: identifier.trim())
-        .limit(1)
-        .get();
-    if (byExact.docs.isNotEmpty) {
-      final email = byExact.docs.first.data()["email"] as String?;
-      if (email != null && email.isNotEmpty) {
-        return email;
-      }
-    }
-
-    // Fallback for legacy user documents without usernameLower.
-    final allUsers = await _firestore
-        .collection(FirestorePaths.users)
-        .limit(500)
-        .get();
-    for (final doc in allUsers.docs) {
-      final data = doc.data();
-      final username = (data["username"] as String?)?.trim().toLowerCase();
-      final email = (data["email"] as String?)?.trim();
-      if (username == normalized && email != null && email.isNotEmpty) {
-        return email;
       }
     }
 

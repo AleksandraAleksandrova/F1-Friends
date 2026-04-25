@@ -3,6 +3,7 @@ import "package:firebase_auth/firebase_auth.dart";
 import "package:firebase_storage/firebase_storage.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:image_picker/image_picker.dart";
+import "package:flutter/material.dart";
 
 import "../../auth/providers/auth_providers.dart";
 import "../../../core/constants/firestore_paths.dart";
@@ -63,40 +64,41 @@ final profileStatsProvider = FutureProvider<ProfileStats>((ref) async {
 
   final leagues = await ref.watch(userLeaguesProvider.future);
   final created = leagues.where((l) => l.adminUserId == uid).length;
-
-  int? bestPlace;
   final firestore = ref.watch(profileFirestoreProvider);
-  for (final league in leagues) {
-    final membersSnap = await firestore
-        .collection(FirestorePaths.leagues)
-        .doc(league.id)
-        .collection("members")
-        .get();
-    final members = membersSnap.docs
-        .map((d) => d.data())
-        .where((m) => (m["userId"] as String?)?.isNotEmpty ?? false)
-        .toList();
-    members.sort((a, b) {
-      final aPoints = ((a["totalPoints"] as num?) ?? 0).toInt();
-      final bPoints = ((b["totalPoints"] as num?) ?? 0).toInt();
-      final byPoints = bPoints.compareTo(aPoints);
-      if (byPoints != 0) {
-        return byPoints;
-      }
-      final aUid = (a["userId"] as String?) ?? "";
-      final bUid = (b["userId"] as String?) ?? "";
-      return aUid.compareTo(bUid);
-    });
+  final places = await Future.wait(
+    leagues.map((league) async {
+      final membersSnap = await firestore
+          .collection(FirestorePaths.leagues)
+          .doc(league.id)
+          .collection("members")
+          .get();
+      final members = membersSnap.docs
+          .map((d) => d.data())
+          .where((m) => (m["userId"] as String?)?.isNotEmpty ?? false)
+          .toList();
+      members.sort((a, b) {
+        final aPoints = ((a["totalPoints"] as num?) ?? 0).toInt();
+        final bPoints = ((b["totalPoints"] as num?) ?? 0).toInt();
+        final byPoints = bPoints.compareTo(aPoints);
+        if (byPoints != 0) {
+          return byPoints;
+        }
+        final aUid = (a["userId"] as String?) ?? "";
+        final bUid = (b["userId"] as String?) ?? "";
+        return aUid.compareTo(bUid);
+      });
 
-    final place = members.indexWhere((m) => m["userId"] == uid);
-    if (place == -1) {
-      continue;
-    }
-    final rank = place + 1;
-    if (bestPlace == null || rank < bestPlace) {
-      bestPlace = rank;
-    }
-  }
+      final place = members.indexWhere((m) => m["userId"] == uid);
+      if (place == -1) {
+        return null;
+      }
+      return place + 1;
+    }),
+  );
+  final validPlaces = places.whereType<int>().toList();
+  final bestPlace = validPlaces.isEmpty
+      ? null
+      : validPlaces.reduce((best, current) => current < best ? current : best);
 
   return ProfileStats(
     joinedLeaguesCount: leagues.length,
@@ -106,12 +108,15 @@ final profileStatsProvider = FutureProvider<ProfileStats>((ref) async {
 });
 
 class ProfileController extends StateNotifier<AsyncValue<void>> {
-  ProfileController(this._service) : super(const AsyncData(null));
+  ProfileController(this._ref, this._service) : super(const AsyncData(null));
 
+  final Ref _ref;
   final ProfileService _service;
 
+  User? get _currentUser => _ref.read(firebaseAuthProvider).currentUser;
+
   Future<void> ensureCurrentUserDoc() async {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = _currentUser;
     if (user?.uid == null || user?.email == null) {
       return;
     }
@@ -119,7 +124,7 @@ class ProfileController extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> updateUsername(String username) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = _currentUser?.uid;
     if (uid == null) {
       throw StateError("User not authenticated.");
     }
@@ -128,15 +133,35 @@ class ProfileController extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> updateProfileImage(ImageSource source) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final uid = _currentUser?.uid;
     if (uid == null) {
       throw StateError("User not authenticated.");
     }
     state = const AsyncLoading();
     state = await AsyncValue.guard(() => _service.updateProfileImage(uid: uid, source: source));
   }
+
+  Future<void> updatePreferredLanguage(String languageCode) async {
+    final uid = _currentUser?.uid;
+    if (uid == null) {
+      throw StateError("User not authenticated.");
+    }
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+      () => _service.updatePreferredLanguage(uid: uid, languageCode: languageCode),
+    );
+  }
 }
 
 final profileControllerProvider = StateNotifierProvider<ProfileController, AsyncValue<void>>((ref) {
-  return ProfileController(ref.watch(profileServiceProvider));
+  return ProfileController(ref, ref.watch(profileServiceProvider));
+});
+
+final appLocaleProvider = Provider<Locale?>((ref) {
+  final user = ref.watch(currentAppUserProvider).value;
+  final code = user?.preferredLanguageCode?.trim().toLowerCase();
+  if (code == "en" || code == "fr" || code == "it") {
+    return Locale(code!);
+  }
+  return null;
 });

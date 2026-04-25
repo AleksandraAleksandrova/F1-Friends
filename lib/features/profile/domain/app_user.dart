@@ -7,6 +7,7 @@ class AppUser {
   final String? displayName;
   final String? profileImageUrl;
   final DateTime? joinedAt;
+  final String? preferredLanguageCode;
 
   const AppUser({
     required this.id,
@@ -15,6 +16,7 @@ class AppUser {
     this.displayName,
     this.profileImageUrl,
     this.joinedAt,
+    this.preferredLanguageCode,
   });
 
   Map<String, dynamic> toMap() {
@@ -25,6 +27,7 @@ class AppUser {
       "displayName": displayName,
       "profileImageUrl": profileImageUrl,
       "joinedAt": joinedAt?.toUtc().toIso8601String(),
+      "preferredLanguageCode": preferredLanguageCode,
     };
   }
 
@@ -45,6 +48,7 @@ class AppUser {
       displayName: (map["displayName"] as String?) ?? (map["username"] as String?) ?? fallbackUsername,
       profileImageUrl: map["profileImageUrl"] as String?,
       joinedAt: joinedAt,
+      preferredLanguageCode: map["preferredLanguageCode"] as String?,
     );
   }
 }

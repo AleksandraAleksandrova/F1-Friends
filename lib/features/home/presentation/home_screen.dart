@@ -1,5 +1,6 @@
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
+import "../../../l10n/app_localizations.dart";
 
 import "../../../core/notifications/local_notification_service.dart";
 import "../../leagues/presentation/leagues_screen.dart";
@@ -36,7 +37,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       }
       _startupPromptShown = true;
       await Future<void>.delayed(const Duration(seconds: 2));
-      await LocalNotificationService.showPredictionReminder();
+      if (!mounted) {
+        return;
+      }
+      final l10n = AppLocalizations.of(context)!;
+      await LocalNotificationService.showPredictionReminder(
+        title: l10n.notificationsDefaultTitle,
+        body: l10n.notificationsStartupBody,
+      );
     });
   }
 
@@ -46,7 +54,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       return;
     }
     _resumePromptShown = true;
-    LocalNotificationService.showPredictionReminder();
+    final l10n = AppLocalizations.of(context)!;
+    LocalNotificationService.showPredictionReminder(
+      title: l10n.notificationsDefaultTitle,
+      body: l10n.notificationsStartupBody,
+    );
   }
 
   @override
@@ -57,6 +69,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       body: IndexedStack(
         index: _index,
@@ -65,10 +78,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.groups), label: "Leagues"),
-          NavigationDestination(icon: Icon(Icons.flag), label: "Races"),
-          NavigationDestination(icon: Icon(Icons.person), label: "Profile"),
+        destinations: [
+          NavigationDestination(icon: const Icon(Icons.groups), label: l10n.homeNavLeagues),
+          NavigationDestination(icon: const Icon(Icons.flag), label: l10n.homeNavRaces),
+          NavigationDestination(icon: const Icon(Icons.person), label: l10n.homeNavProfile),
         ],
       ),
     );

@@ -23,30 +23,27 @@ class FirestoreLeaguesService implements LeaguesService {
 
   @override
   Stream<List<League>> watchUserLeagues(String userId) {
-    return _firestore.doc(FirestorePaths.user(userId)).snapshots().asyncMap((userSnap) async {
-      final data = userSnap.data();
-      final leagueIds = (data?["joinedLeagueIds"] as List?)
-              ?.whereType<String>()
-              .toSet()
-              .toList() ??
-          <String>[];
-      if (leagueIds.isEmpty) {
+    return _firestore
+        .collection(FirestorePaths.leagues)
+        .snapshots()
+        .asyncMap((leagueSnap) async {
+      if (leagueSnap.docs.isEmpty) {
         return <League>[];
       }
 
-      final leagues = <League>[];
-      for (final leagueId in leagueIds) {
-        final doc = await _firestore.doc(FirestorePaths.league(leagueId)).get();
-        if (!doc.exists) {
-          continue;
-        }
-        leagues.add(
-          League.fromMap({
-            "id": doc.id,
-            ...doc.data()!,
-          }),
-        );
-      }
+      final membershipChecks = await Future.wait(
+        leagueSnap.docs.map((leagueDoc) async {
+          final memberDoc = await leagueDoc.reference.collection("members").doc(userId).get();
+          if (!memberDoc.exists || leagueDoc.data().isEmpty) {
+            return null;
+          }
+          return League.fromMap({
+            "id": leagueDoc.id,
+            ...leagueDoc.data(),
+          });
+        }),
+      );
+      final leagues = membershipChecks.whereType<League>().toList();
 
       leagues.sort((a, b) => b.seasonYear.compareTo(a.seasonYear));
       return leagues;
@@ -62,49 +59,53 @@ class FirestoreLeaguesService implements LeaguesService {
       throw StateError("End round must be >= start round.");
     }
 
-    final joinCode = await _generateUniqueJoinCode();
-    final leagueRef = _firestore.collection(FirestorePaths.leagues).doc();
-    final joinCodeRef = _firestore.doc(FirestorePaths.leagueJoinCode(joinCode));
-    final memberRef = leagueRef.collection("members").doc(userId);
-    final userRef = _firestore.doc(FirestorePaths.user(userId));
+    for (var attempt = 0; attempt < 8; attempt++) {
+      final joinCode = _generateJoinCode();
+      final leagueRef = _firestore.collection(FirestorePaths.leagues).doc();
+      final joinCodeRef = _firestore.doc(FirestorePaths.leagueJoinCode(joinCode));
+      final memberRef = leagueRef.collection("members").doc(userId);
 
-    // Many-to-many representation:
-    // 1) leagues/{leagueId}/members/{uid}
-    // 2) users/{uid}.joinedLeagueIds[]
-    // memberIds[] on league is a query helper.
-    final batch = _firestore.batch();
-    batch.set(leagueRef, {
-      "name": input.name.trim(),
-      "joinCode": joinCode,
-      "adminUserId": userId,
-      "seasonYear": input.seasonYear,
-      "startRound": input.startRound,
-      "endRound": input.endRound,
-      "scoringLocked": true,
-      "memberCount": 1,
-      "memberIds": [userId],
-      "scoringRules": input.scoringRules.toMap(),
-      "createdAt": FieldValue.serverTimestamp(),
-      "updatedAt": FieldValue.serverTimestamp(),
-    });
-    batch.set(joinCodeRef, {
-      "joinCode": joinCode,
-      "leagueId": leagueRef.id,
-      "createdAt": FieldValue.serverTimestamp(),
-    });
-    batch.set(memberRef, {
-      "userId": userId,
-      "joinedAt": FieldValue.serverTimestamp(),
-      "role": "admin",
-      "totalPoints": 0,
-    });
-    batch.set(userRef, {
-      "joinedLeagueIds": FieldValue.arrayUnion([leagueRef.id]),
-      "updatedAt": FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-    await batch.commit();
+      try {
+        await _firestore.runTransaction((tx) async {
+          final existingCode = await tx.get(joinCodeRef);
+          if (existingCode.exists) {
+            throw StateError("join-code-collision");
+          }
 
-    return leagueRef.id;
+          tx.set(leagueRef, {
+            "name": input.name.trim(),
+            "joinCode": joinCode,
+            "adminUserId": userId,
+            "seasonYear": input.seasonYear,
+            "startRound": input.startRound,
+            "endRound": input.endRound,
+            "scoringLocked": true,
+            "memberCount": 1,
+            "scoringRules": input.scoringRules.toMap(),
+            "createdAt": FieldValue.serverTimestamp(),
+            "updatedAt": FieldValue.serverTimestamp(),
+          });
+          tx.set(joinCodeRef, {
+            "joinCode": joinCode,
+            "leagueId": leagueRef.id,
+            "createdAt": FieldValue.serverTimestamp(),
+          });
+          tx.set(memberRef, {
+            "userId": userId,
+            "joinedAt": FieldValue.serverTimestamp(),
+            "role": "admin",
+            "totalPoints": 0,
+          });
+        });
+        return leagueRef.id;
+      } on StateError catch (error) {
+        if (error.message != "join-code-collision") {
+          rethrow;
+        }
+      }
+    }
+
+    throw StateError("Could not generate a unique join code. Please retry.");
   }
 
   @override
@@ -124,16 +125,17 @@ class FirestoreLeaguesService implements LeaguesService {
     }
     final leagueRef = _firestore.doc(FirestorePaths.league(leagueId));
     final memberRef = leagueRef.collection("members").doc(userId);
-    final userRef = _firestore.doc(FirestorePaths.user(userId));
 
     final result = await _firestore.runTransaction<JoinLeagueResult>((tx) async {
       final leagueSnap = await tx.get(leagueRef);
-      final memberIds = List<String>.from((leagueSnap.data()?["memberIds"] ?? const <String>[]));
-      final alreadyMember = memberIds.contains(userId);
+      if (!leagueSnap.exists) {
+        throw StateError("League was not found.");
+      }
+      final memberSnap = await tx.get(memberRef);
+      final alreadyMember = memberSnap.exists;
 
       if (!alreadyMember) {
         tx.update(leagueRef, {
-          "memberIds": FieldValue.arrayUnion([userId]),
           "memberCount": FieldValue.increment(1),
           "updatedAt": FieldValue.serverTimestamp(),
         });
@@ -142,10 +144,6 @@ class FirestoreLeaguesService implements LeaguesService {
           "joinedAt": FieldValue.serverTimestamp(),
           "role": "member",
           "totalPoints": 0,
-        }, SetOptions(merge: true));
-        tx.set(userRef, {
-          "joinedLeagueIds": FieldValue.arrayUnion([leagueRef.id]),
-          "updatedAt": FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       }
 
@@ -175,17 +173,6 @@ class FirestoreLeaguesService implements LeaguesService {
     final memberDocs = await leagueRef.collection("members").get();
     final batch = _firestore.batch();
     for (final memberDoc in memberDocs.docs) {
-      final memberUid = (memberDoc.data()["userId"] as String?) ?? memberDoc.id;
-      if (memberUid.isNotEmpty) {
-        batch.set(
-          _firestore.doc(FirestorePaths.user(memberUid)),
-          {
-            "joinedLeagueIds": FieldValue.arrayRemove([leagueId]),
-            "updatedAt": FieldValue.serverTimestamp(),
-          },
-          SetOptions(merge: true),
-        );
-      }
       batch.delete(memberDoc.reference);
     }
 
@@ -196,15 +183,8 @@ class FirestoreLeaguesService implements LeaguesService {
     await batch.commit();
   }
 
-  Future<String> _generateUniqueJoinCode() async {
+  String _generateJoinCode() {
     const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    for (var i = 0; i < 12; i++) {
-      final code = List.generate(6, (_) => alphabet[_random.nextInt(alphabet.length)]).join();
-      final existing = await _firestore.doc(FirestorePaths.leagueJoinCode(code)).get();
-      if (!existing.exists) {
-        return code;
-      }
-    }
-    throw StateError("Could not generate a unique join code. Please retry.");
+    return List.generate(6, (_) => alphabet[_random.nextInt(alphabet.length)]).join();
   }
 }

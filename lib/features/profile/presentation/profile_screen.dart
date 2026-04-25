@@ -1,7 +1,8 @@
-import "package:firebase_auth/firebase_auth.dart";
 import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:image_picker/image_picker.dart";
+import "../../../l10n/app_localizations.dart";
+import "../../../core/utils/app_error_text.dart";
 
 import "../../auth/providers/auth_providers.dart";
 import "../providers/profile_providers.dart";
@@ -26,29 +27,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(authControllerProvider);
     final profileState = ref.watch(profileControllerProvider);
     final appUserAsync = ref.watch(currentAppUserProvider);
     final statsAsync = ref.watch(profileStatsProvider);
-    final user = FirebaseAuth.instance.currentUser;
+    final currentUid = ref.watch(authUserIdProvider).value;
 
     ref.listen<AsyncValue<void>>(profileControllerProvider, (previous, next) {
       next.whenOrNull(
         error: (error, _) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(error.toString())),
+            SnackBar(content: Text(_friendlyError(error))),
           );
         },
       );
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Profile")),
+      appBar: AppBar(title: Text(l10n.profileTitle)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: appUserAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(child: Text("Failed to load profile: $error")),
+          error: (error, _) => Center(
+            child: Text(
+              l10n.profileFailedLoad(AppErrorText.describe(l10n, error)),
+              textAlign: TextAlign.center,
+            ),
+          ),
           data: (appUser) {
             if (appUser != null && _seededUserId != appUser.id) {
               _seededUserId = appUser.id;
@@ -56,149 +63,153 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               _usernameController.selection =
                   TextSelection.collapsed(offset: _usernameController.text.length);
             }
-            final fallbackName = ((user?.uid ?? "").length >= 6)
-                ? (user!.uid.substring(0, 6))
-                : (user?.uid ?? "driver");
+            final fallbackName = ((currentUid ?? "").length >= 6)
+                ? currentUid!.substring(0, 6)
+                : (currentUid ?? "driver");
             final currentName = (appUser?.username.trim().isNotEmpty ?? false)
                 ? appUser!.username.trim()
                 : fallbackName;
 
             final topCard = Card(
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(18),
                 child: Column(
                   children: [
-                    Stack(
-                      alignment: Alignment.bottomRight,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CircleAvatar(
-                          radius: 44,
-                          backgroundImage: (appUser?.profileImageUrl?.isNotEmpty ?? false)
-                              ? NetworkImage(appUser!.profileImageUrl!)
-                              : null,
-                          child: (appUser?.profileImageUrl?.isNotEmpty ?? false)
-                              ? null
-                              : const Icon(Icons.person, size: 44),
-                        ),
-                        PopupMenuButton<ImageSource>(
-                          enabled: !profileState.isLoading,
-                          tooltip: "Change photo",
-                          onSelected: (source) =>
-                              ref.read(profileControllerProvider.notifier).updateProfileImage(source),
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(
-                              value: ImageSource.gallery,
-                              child: Text("Choose from gallery"),
+                        Stack(
+                          alignment: Alignment.bottomRight,
+                          children: [
+                            CircleAvatar(
+                              radius: 44,
+                              backgroundImage: (appUser?.profileImageUrl?.isNotEmpty ?? false)
+                                  ? NetworkImage(appUser!.profileImageUrl!)
+                                  : null,
+                              child: (appUser?.profileImageUrl?.isNotEmpty ?? false)
+                                  ? null
+                                  : const Icon(Icons.person, size: 44),
                             ),
-                            PopupMenuItem(
-                              value: ImageSource.camera,
-                              child: Text("Take photo"),
+                            PopupMenuButton<ImageSource>(
+                              enabled: !profileState.isLoading,
+                              tooltip: l10n.profileChangePhoto,
+                              onSelected: (source) =>
+                                  ref.read(profileControllerProvider.notifier).updateProfileImage(source),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: ImageSource.gallery,
+                                  child: Text(l10n.profileChooseFromGallery),
+                                ),
+                                PopupMenuItem(
+                                  value: ImageSource.camera,
+                                  child: Text(l10n.profileTakePhoto),
+                                ),
+                              ],
+                              child: const CircleAvatar(
+                                radius: 16,
+                                child: Icon(Icons.camera_alt, size: 16),
+                              ),
                             ),
                           ],
-                          child: const CircleAvatar(
-                            radius: 16,
-                            child: Icon(Icons.camera_alt, size: 16),
-                          ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    if (!_editingUsername)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              if (!_editingUsername)
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          l10n.profileUsername,
+                                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                              ),
+                                        ),
+                                        const Spacer(),
+                                        IconButton(
+                                          onPressed: profileState.isLoading
+                                              ? null
+                                              : () {
+                                                  setState(() {
+                                                    _editingUsername = true;
+                                                    _usernameController.text = currentName;
+                                                    _usernameController.selection = TextSelection.collapsed(
+                                                      offset: _usernameController.text.length,
+                                                    );
+                                                  });
+                                                },
+                                          icon: const Icon(Icons.edit),
+                                          tooltip: l10n.profileEditUsername,
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      currentName,
+                                      style: Theme.of(context).textTheme.titleLarge,
+                                    ),
+                                  ],
+                                )
+                              else ...[
+                                TextField(
+                                  controller: _usernameController,
+                                  decoration: InputDecoration(
+                                    labelText: l10n.profileUsername,
+                                    helperText: l10n.profileUsernameHelper,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: profileState.isLoading
+                                            ? null
+                                            : () => setState(() => _editingUsername = false),
+                                        child: Text(l10n.commonCancel),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: FilledButton(
+                                        onPressed: profileState.isLoading
+                                            ? null
+                                            : () async {
+                                                await ref
+                                                    .read(profileControllerProvider.notifier)
+                                                    .updateUsername(_usernameController.text);
+                                                if (!mounted) {
+                                                  return;
+                                                }
+                                                setState(() => _editingUsername = false);
+                                              },
+                                        child: Text(l10n.commonSave),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: 10),
                               Text(
-                                "Username",
+                                l10n.profileEmail,
                                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                                     ),
                               ),
-                              const Spacer(),
-                              IconButton(
-                                onPressed: profileState.isLoading
-                                    ? null
-                                    : () {
-                                        setState(() {
-                                          _editingUsername = true;
-                                          _usernameController.text = currentName;
-                                          _usernameController.selection = TextSelection.collapsed(
-                                            offset: _usernameController.text.length,
-                                          );
-                                        });
-                                      },
-                                icon: const Icon(Icons.edit),
-                                tooltip: "Edit username",
+                              const SizedBox(height: 2),
+                              Text(
+                                appUser?.email.isNotEmpty == true
+                                    ? appUser!.email
+                                    : l10n.commonUnknown,
+                                style: Theme.of(context).textTheme.bodyLarge,
                               ),
                             ],
                           ),
-                          Text(
-                            currentName,
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
-                        ],
-                      )
-                    else ...[
-                      TextField(
-                        controller: _usernameController,
-                        decoration: const InputDecoration(
-                          labelText: "Username",
-                          helperText: "At least 3 characters",
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: profileState.isLoading
-                                  ? null
-                                  : () => setState(() => _editingUsername = false),
-                              child: const Text("Cancel"),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: profileState.isLoading
-                                  ? null
-                                  : () async {
-                                      await ref
-                                          .read(profileControllerProvider.notifier)
-                                          .updateUsername(_usernameController.text);
-                                      if (!mounted) {
-                                        return;
-                                      }
-                                      setState(() => _editingUsername = false);
-                                    },
-                              child: const Text("Save"),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Email",
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            user?.email ?? "unknown",
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                ),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
                   ],
                 ),
@@ -212,21 +223,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "My Overview",
+                      l10n.profileMyOverview,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
                     statsAsync.when(
-                      loading: () => const Text("Loading stats..."),
-                      error: (e, _) => Text("Stats unavailable: $e"),
-                      data: (stats) => Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      loading: () => Text(l10n.profileLoadingStats),
+                      error: (e, _) => Text(
+                        l10n.profileStatsUnavailable(AppErrorText.describe(l10n, e)),
+                      ),
+                      data: (stats) => Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
                         children: [
-                          Text("Joined leagues: ${stats.joinedLeaguesCount}"),
-                          Text("Created leagues: ${stats.createdLeaguesCount}"),
-                          Text(
-                            "Best leaderboard place: "
-                            "${stats.bestLeaderboardPlace == null ? "N/A" : "#${stats.bestLeaderboardPlace}"}",
+                          _StatTile(
+                            label: l10n.profileJoinedLeagues(stats.joinedLeaguesCount),
+                            icon: Icons.groups_2_outlined,
+                          ),
+                          _StatTile(
+                            label: l10n.profileCreatedLeagues(stats.createdLeaguesCount),
+                            icon: Icons.add_chart_outlined,
+                          ),
+                          _StatTile(
+                            label: stats.bestLeaderboardPlace == null
+                                ? l10n.profileBestLeaderboardPlaceNone
+                                : l10n.profileBestLeaderboardPlace("#${stats.bestLeaderboardPlace}"),
+                            icon: Icons.emoji_events_outlined,
                           ),
                         ],
                       ),
@@ -236,22 +258,105 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             );
 
+            final settingsCard = Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.profileLanguage,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(appUser?.preferredLanguageCode ?? "en"),
+                      initialValue: switch (appUser?.preferredLanguageCode) {
+                        "fr" => "fr",
+                        "it" => "it",
+                        _ => "en",
+                      },
+                      decoration: InputDecoration(labelText: l10n.profileLanguage),
+                      items: [
+                        DropdownMenuItem(value: "en", child: Text(l10n.languageEnglish)),
+                        DropdownMenuItem(value: "fr", child: Text(l10n.languageFrench)),
+                        DropdownMenuItem(value: "it", child: Text(l10n.languageItalian)),
+                      ],
+                      onChanged: profileState.isLoading
+                          ? null
+                          : (value) {
+                              if (value == null) {
+                                return;
+                              }
+                              ref.read(profileControllerProvider.notifier).updatePreferredLanguage(value);
+                            },
+                    ),
+                  ],
+                ),
+              ),
+            );
+
             return ListView(
               children: [
                 topCard,
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 statsCard,
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
+                settingsCard,
+                const SizedBox(height: 16),
                 FilledButton(
                   onPressed: authState.isLoading
                       ? null
                       : () => ref.read(authControllerProvider.notifier).signOut(),
-                  child: const Text("Sign Out"),
+                  child: Text(l10n.profileSignOut),
                 ),
               ],
             );
           },
         ),
+      ),
+    );
+  }
+
+  String _friendlyError(Object error) {
+    final l10n = AppLocalizations.of(context)!;
+    return AppErrorText.describe(l10n, error);
+  }
+}
+
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.label,
+    required this.icon,
+  });
+
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 180),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }
