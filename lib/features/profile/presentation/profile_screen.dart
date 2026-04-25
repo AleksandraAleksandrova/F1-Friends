@@ -18,9 +18,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final _usernameController = TextEditingController();
   String? _seededUserId;
   bool _editingUsername = false;
+  ProviderSubscription<AsyncValue<void>>? _profileSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _profileSubscription = ref.listenManual<AsyncValue<void>>(
+      profileControllerProvider,
+      (previous, next) {
+        final l10n = AppLocalizations.of(context);
+        if (!mounted || l10n == null) {
+          return;
+        }
+        next.whenOrNull(
+          error: (error, _) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(AppErrorText.describe(l10n, error))),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   void dispose() {
+    _profileSubscription?.close();
     _usernameController.dispose();
     super.dispose();
   }
@@ -33,16 +56,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final appUserAsync = ref.watch(currentAppUserProvider);
     final statsAsync = ref.watch(profileStatsProvider);
     final currentUid = ref.watch(authUserIdProvider).value;
-
-    ref.listen<AsyncValue<void>>(profileControllerProvider, (previous, next) {
-      next.whenOrNull(
-        error: (error, _) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(_friendlyError(error))),
-          );
-        },
-      );
-    });
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.profileTitle)),
@@ -318,10 +331,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  String _friendlyError(Object error) {
-    final l10n = AppLocalizations.of(context)!;
-    return AppErrorText.describe(l10n, error);
-  }
 }
 
 class _StatTile extends StatelessWidget {

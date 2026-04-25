@@ -139,7 +139,11 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
           },
         );
       },
-    ).whenComplete(dnfController.dispose);
+    ).whenComplete(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        dnfController.dispose();
+      });
+    });
   }
 
   Widget _driverSearchField({
@@ -468,7 +472,9 @@ class _PredictionsHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final isLocked = !DateTime.now().toUtc().isBefore(PredictionDialog.lockAtUtc(race));
+    final now = DateTime.now().toUtc();
+    final isFinished = !now.isBefore(race.expectedEndTimeUtc);
+    final isLocked = !isFinished && !now.isBefore(PredictionDialog.lockAtUtc(race));
 
     return Card(
       child: Padding(
@@ -495,7 +501,12 @@ class _PredictionsHeaderCard extends StatelessWidget {
                 ],
               ),
             ),
-            if (isLocked)
+            if (isFinished)
+              _LeagueBadge(
+                icon: Icons.flag_circle_outlined,
+                label: l10n.racesFinished,
+              )
+            else if (isLocked)
               _LeagueBadge(
                 icon: Icons.lock_outline,
                 label: l10n.racesLocked,

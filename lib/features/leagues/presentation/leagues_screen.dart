@@ -349,10 +349,12 @@ class LeaguesScreen extends ConsumerWidget {
       },
     );
 
-    nameController.dispose();
-    seasonController.dispose();
-    startRoundController.dispose();
-    endRoundController.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      nameController.dispose();
+      seasonController.dispose();
+      startRoundController.dispose();
+      endRoundController.dispose();
+    });
 
     if (context.mounted && submitted == true) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -423,7 +425,9 @@ class LeaguesScreen extends ConsumerWidget {
       },
     );
 
-    codeController.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      codeController.dispose();
+    });
 
     if (context.mounted && submitted == true) {
       ScaffoldMessenger.of(context).showSnackBar(

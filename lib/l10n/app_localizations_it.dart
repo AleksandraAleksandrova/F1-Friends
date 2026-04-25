@@ -466,6 +466,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get racesLocked => 'Bloccato';
 
   @override
+  String get racesFinished => 'Terminata';
+
+  @override
   String get racesPredict => 'Pronostica';
 
   @override

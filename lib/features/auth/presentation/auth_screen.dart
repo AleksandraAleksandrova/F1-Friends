@@ -21,9 +21,28 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _passwordController = TextEditingController();
   bool _isLoginMode = true;
   String? _authError;
+  ProviderSubscription<AsyncValue<void>>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authSubscription = ref.listenManual<AsyncValue<void>>(
+      authControllerProvider,
+      (previous, next) {
+        final l10n = AppLocalizations.of(context);
+        if (!mounted || l10n == null) {
+          return;
+        }
+        next.whenOrNull(
+          error: (error, _) => setState(() => _authError = _humanizeError(l10n, error)),
+        );
+      },
+    );
+  }
 
   @override
   void dispose() {
+    _authSubscription?.close();
     _identifierController.dispose();
     _registerEmailController.dispose();
     _usernameController.dispose();
@@ -179,12 +198,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(authControllerProvider);
     final authUserId = ref.watch(authUserIdProvider);
-
-    ref.listen<AsyncValue<void>>(authControllerProvider, (previous, next) {
-      next.whenOrNull(
-        error: (error, _) => setState(() => _authError = _humanizeError(l10n, error)),
-      );
-    });
 
     return Scaffold(
       body: authUserId.when(

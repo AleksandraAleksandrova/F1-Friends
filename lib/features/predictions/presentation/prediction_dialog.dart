@@ -166,7 +166,11 @@ class PredictionDialog {
               },
             );
           },
-        ).whenComplete(dnfController.dispose) ??
+        ).whenComplete(() {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            dnfController.dispose();
+          });
+        }) ??
         false;
 
     return saved;

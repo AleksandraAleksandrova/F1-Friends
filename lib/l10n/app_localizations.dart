@@ -888,6 +888,12 @@ abstract class AppLocalizations {
   /// **'Locked'**
   String get racesLocked;
 
+  /// No description provided for @racesFinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Finished'**
+  String get racesFinished;
+
   /// No description provided for @racesPredict.
   ///
   /// In en, this message translates to:

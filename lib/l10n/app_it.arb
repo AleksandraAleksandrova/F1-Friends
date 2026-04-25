@@ -148,6 +148,7 @@
   "racesFailedLoadApi": "Impossibile caricare i dati gara dall'API: {error}",
   "@racesFailedLoadApi": { "placeholders": { "error": {} } },
   "racesLocked": "Bloccato",
+  "racesFinished": "Terminata",
   "racesPredict": "Pronostica",
   "racesPredictionSaved": "Pronostico salvato.",
   "racesLock": "Blocco: {date}",

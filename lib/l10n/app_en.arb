@@ -222,6 +222,7 @@
     }
   },
   "racesLocked": "Locked",
+  "racesFinished": "Finished",
   "racesPredict": "Predict",
   "racesPredictionSaved": "Prediction saved.",
   "racesLock": "Lock: {date}",

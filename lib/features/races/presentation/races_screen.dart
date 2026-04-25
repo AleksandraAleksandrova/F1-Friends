@@ -155,10 +155,14 @@ class _RacePredictionRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final lockAt = PredictionDialog.lockAtUtc(race);
-    final isLocked = !DateTime.now().toUtc().isBefore(lockAt);
+    final now = DateTime.now().toUtc();
+    final isFinished = !now.isBefore(race.expectedEndTimeUtc);
+    final isLocked = !isFinished && !now.isBefore(lockAt);
     final existingPredictionAsync = ref.watch(predictionForRaceProvider(race.id));
 
-    final buttonLabel = isLocked
+    final buttonLabel = isFinished
+        ? l10n.racesFinished
+        : isLocked
         ? l10n.racesLocked
         : existingPredictionAsync.maybeWhen(
             data: (p) => p == null ? l10n.racesPredict : l10n.commonUpdate,
@@ -199,7 +203,7 @@ class _RacePredictionRow extends ConsumerWidget {
                 ),
               ),
               OutlinedButton(
-                onPressed: isLocked
+                onPressed: (isLocked || isFinished)
                     ? null
                     : () async {
                         final saved = await PredictionDialog.show(

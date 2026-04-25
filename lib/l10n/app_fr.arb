@@ -222,6 +222,7 @@
     }
   },
   "racesLocked": "Verrouillé",
+  "racesFinished": "Terminée",
   "racesPredict": "Prédire",
   "racesPredictionSaved": "Prédiction enregistrée.",
   "racesLock": "Verrouillage : {date}",

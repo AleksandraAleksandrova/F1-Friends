@@ -200,7 +200,7 @@ class FirestoreProfileService implements ProfileService {
     }
 
     final file = File(picked.path);
-    final ref = _storage.ref("profile_images/$uid");
+    final ref = _storage.ref("profile_images/$uid.jpg");
     await ref.putFile(file);
     final downloadUrl = await ref.getDownloadURL();
 

@@ -456,6 +456,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get racesLocked => 'Locked';
 
   @override
+  String get racesFinished => 'Finished';
+
+  @override
   String get racesPredict => 'Predict';
 
   @override

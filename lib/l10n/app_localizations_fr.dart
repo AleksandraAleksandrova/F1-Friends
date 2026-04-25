@@ -472,6 +472,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get racesLocked => 'Verrouillé';
 
   @override
+  String get racesFinished => 'Terminée';
+
+  @override
   String get racesPredict => 'Prédire';
 
   @override
