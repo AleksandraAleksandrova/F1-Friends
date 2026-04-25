@@ -93,6 +93,36 @@ class HttpF1ApiService implements F1ApiService {
   }
 
   @override
+  Future<RaceResult?> fetchRaceResultForRound({
+    required int seasonYear,
+    required int round,
+    required String raceId,
+  }) async {
+    try {
+      final jsonMap = await _getJson("$_base/$seasonYear/$round/race");
+      final summary = _latestRaceSummaryFromRoundRace(
+        jsonMap: jsonMap,
+        fallbackSeasonYear: seasonYear,
+        fallbackRound: round,
+        fallbackRace: null,
+      );
+      if (summary == null || summary.podium.length < 3) {
+        return null;
+      }
+      return RaceResult(
+        raceId: raceId,
+        p1DriverCode: summary.podium[0].shortName,
+        p2DriverCode: summary.podium[1].shortName,
+        p3DriverCode: summary.podium[2].shortName,
+        fastestLapDriverCode: summary.fastestLapDriverId ?? "",
+        dnfCount: summary.dnfCount,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
   Future<List<F1Driver>> fetchCurrentDrivers() async {
     final jsonMap = await _getJson("$_base/current/drivers");
     final drivers = (jsonMap["drivers"] as List?)?.cast<Map<String, dynamic>>() ?? const [];
@@ -142,6 +172,7 @@ class HttpF1ApiService implements F1ApiService {
   RaceWeekend? _toRaceWeekend(Map<String, dynamic> race, int? seasonYearFromResponse) {
     final schedule = (race["schedule"] as Map?)?.cast<String, dynamic>();
     final raceSchedule = (schedule?["race"] as Map?)?.cast<String, dynamic>();
+    final circuit = (race["circuit"] as Map?)?.cast<String, dynamic>();
     final date = raceSchedule?["date"] as String?;
     final time = raceSchedule?["time"] as String?;
     final startTimeUtc = _parseDateTimeUtc(date, time);
@@ -152,8 +183,12 @@ class HttpF1ApiService implements F1ApiService {
     return RaceWeekend(
       id: (race["raceId"] as String?) ?? "unknown_race",
       seasonYear: seasonYearFromResponse ?? DateTime.now().year,
-      round: (race["round"] as num?)?.toInt() ?? 0,
+      round: _asInt(race["round"]) ?? 0,
       raceName: (race["raceName"] as String?) ?? "Unknown race",
+      circuitId: (circuit?["circuitId"] as String?) ?? "",
+      circuitName: (circuit?["circuitName"] as String?) ?? "",
+      country: (circuit?["country"] as String?) ?? "",
+      city: (circuit?["city"] as String?) ?? "",
       startTimeUtc: startTimeUtc,
       numberOfLaps: (race["laps"] as num?)?.toInt() ?? 0,
       qualifyingStartUtc: _parseDateTimeUtc(
@@ -177,8 +212,8 @@ class HttpF1ApiService implements F1ApiService {
     }
     return _latestRaceSummaryFromRaceMap(
       race,
-      fallbackSeasonYear: (jsonMap["season"] as num?)?.toInt() ?? DateTime.now().year,
-      fallbackRound: (race["round"] as num?)?.toInt() ?? 0,
+      fallbackSeasonYear: _asInt(jsonMap["season"]) ?? DateTime.now().year,
+      fallbackRound: _asInt(race["round"]) ?? 0,
       fallbackRace: null,
     );
   }
@@ -187,9 +222,9 @@ class HttpF1ApiService implements F1ApiService {
     required Map<String, dynamic> jsonMap,
     required int fallbackSeasonYear,
     required int fallbackRound,
-    required RaceWeekend fallbackRace,
+    required RaceWeekend? fallbackRace,
   }) {
-    final race = jsonMap["race"];
+    final race = jsonMap["races"] ?? jsonMap["race"];
     if (race is! Map<String, dynamic>) {
       return null;
     }
@@ -212,8 +247,8 @@ class HttpF1ApiService implements F1ApiService {
       return null;
     }
 
-    final season = (race["season"] as num?)?.toInt() ?? fallbackSeasonYear;
-    final round = (race["round"] as num?)?.toInt() ?? fallbackRound;
+    final season = _asInt(race["season"]) ?? fallbackSeasonYear;
+    final round = _asInt(race["round"]) ?? fallbackRound;
     final raceName = (race["raceName"] as String?) ?? fallbackRace?.raceName ?? "Unknown race";
 
     final raceDate = race["date"] as String?;
@@ -221,29 +256,33 @@ class HttpF1ApiService implements F1ApiService {
     final raceStartUtc = _parseDateTimeUtc(raceDate, raceTime) ?? fallbackRace?.startTimeUtc ?? DateTime.now().toUtc();
 
     final top3 = results
-        .where((r) => ((r["position"] as num?)?.toInt() ?? 999) <= 3)
+        .where((r) => (_asInt(r["position"]) ?? 999) <= 3)
         .toList()
-      ..sort((a, b) => ((a["position"] as num?)?.toInt() ?? 999).compareTo((b["position"] as num?)?.toInt() ?? 999));
+      ..sort((a, b) => (_asInt(a["position"]) ?? 999).compareTo(_asInt(b["position"]) ?? 999));
 
     final podium = top3.map((entry) {
       final driver = (entry["driver"] as Map?)?.cast<String, dynamic>() ?? const <String, dynamic>{};
       final name = (driver["name"] as String?) ?? "";
       final surname = (driver["surname"] as String?) ?? "";
       return PodiumEntry(
-        position: (entry["position"] as num?)?.toInt() ?? 0,
+        position: _asInt(entry["position"]) ?? 0,
         driverId: (driver["driverId"] as String?) ?? "",
-        shortName: (driver["shortName"] as String?) ?? "",
+        shortName: ((driver["shortName"] as String?) ?? "").toUpperCase(),
         fullName: "$name $surname".trim(),
       );
     }).toList();
 
-    String? fastestLapDriverId;
+    String? fastestLapDriverCode;
+    Duration? bestFastLapDuration;
     int dnfCount = 0;
     for (final row in results) {
       final fastLap = row["fastLap"];
-      if (fastLap is String && fastLap.isNotEmpty) {
+      final fastLapDuration = _parseLapDuration(fastLap as String?);
+      if (fastLapDuration != null &&
+          (bestFastLapDuration == null || fastLapDuration < bestFastLapDuration)) {
+        bestFastLapDuration = fastLapDuration;
         final driver = (row["driver"] as Map?)?.cast<String, dynamic>();
-        fastestLapDriverId = driver?["driverId"] as String?;
+        fastestLapDriverCode = (driver?["shortName"] as String?)?.toUpperCase();
       }
       final retired = row["retired"];
       if (retired != null && retired.toString().trim().isNotEmpty) {
@@ -251,14 +290,75 @@ class HttpF1ApiService implements F1ApiService {
       }
     }
 
+    fastestLapDriverCode ??= _resolveFastestLapDriverCode(race, results);
+
     return LatestRaceSummary(
       seasonYear: season,
       round: round,
       raceName: raceName,
       raceStartUtc: raceStartUtc,
       podium: podium,
-      fastestLapDriverId: fastestLapDriverId,
+      fastestLapDriverId: fastestLapDriverCode,
       dnfCount: dnfCount,
     );
+  }
+
+  String? _resolveFastestLapDriverCode(
+    Map<String, dynamic> race,
+    List<Map<String, dynamic>> results,
+  ) {
+    final fastLap = (race["fast_lap"] as Map?)?.cast<String, dynamic>();
+    final fastestLapDriverId = fastLap?["fast_lap_driver_id"] as String?;
+    if (fastestLapDriverId == null || fastestLapDriverId.isEmpty) {
+      return null;
+    }
+
+    for (final row in results) {
+      final driver = (row["driver"] as Map?)?.cast<String, dynamic>();
+      if ((driver?["driverId"] as String?) == fastestLapDriverId) {
+        return (driver?["shortName"] as String?)?.toUpperCase();
+      }
+    }
+
+    return null;
+  }
+
+  int? _asInt(Object? value) {
+    if (value is num) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value.trim());
+    }
+    return null;
+  }
+
+  Duration? _parseLapDuration(String? value) {
+    if (value == null) {
+      return null;
+    }
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final minutesSeconds = trimmed.split(":");
+    if (minutesSeconds.length != 2) {
+      return null;
+    }
+
+    final minutes = int.tryParse(minutesSeconds[0]);
+    final secondParts = minutesSeconds[1].split(".");
+    if (minutes == null || secondParts.length != 2) {
+      return null;
+    }
+
+    final seconds = int.tryParse(secondParts[0]);
+    final millis = int.tryParse(secondParts[1].padRight(3, "0").substring(0, 3));
+    if (seconds == null || millis == null) {
+      return null;
+    }
+
+    return Duration(minutes: minutes, seconds: seconds, milliseconds: millis);
   }
 }

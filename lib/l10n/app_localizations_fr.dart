@@ -373,6 +373,15 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String leagueRoundPoints(Object points) {
+    return 'Manche : $points pts';
+  }
+
+  @override
+  String get leagueOfficialPointsShown =>
+      'Les points officiels de cette manche proviennent de l\'API Formula 1.';
+
+  @override
   String get leagueNoPrediction => 'Aucune prédiction envoyée pour le moment.';
 
   @override
@@ -447,6 +456,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get racesLatestResults => 'Derniers résultats';
 
   @override
+  String get racesNearestCircuit => 'Circuit le plus proche';
+
+  @override
   String get racesCurrentSeasonRounds => 'Manches de la saison en cours';
 
   @override
@@ -458,6 +470,10 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get racesNoResults => 'Aucune donnée de résultat disponible.';
+
+  @override
+  String get racesNearestCircuitUnavailable =>
+      'Localisation indisponible ou coordonnées de circuit introuvables.';
 
   @override
   String get racesNoSeasonRaces =>
@@ -513,6 +529,16 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String racesDnfs(Object count) {
     return 'DNF : $count';
+  }
+
+  @override
+  String racesNearestCircuitRace(Object race) {
+    return 'Circuit prévu le plus proche cette saison : $race';
+  }
+
+  @override
+  String racesNearestCircuitDistance(Object distanceKm) {
+    return 'Distance approximative : $distanceKm km';
   }
 
   @override
@@ -632,6 +658,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get languageItalian => 'Italien';
+
+  @override
+  String get languageBulgarian => 'Bulgare';
 
   @override
   String get notificationsChannelName => 'Rappels de prédiction';

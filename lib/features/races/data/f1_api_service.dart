@@ -78,5 +78,11 @@ abstract class F1ApiService {
 
   Future<RaceResult?> fetchLatestRaceResultForScoring();
 
+  Future<RaceResult?> fetchRaceResultForRound({
+    required int seasonYear,
+    required int round,
+    required String raceId,
+  });
+
   Future<List<F1Driver>> fetchCurrentDrivers();
 }

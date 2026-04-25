@@ -287,6 +287,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       initialValue: switch (appUser?.preferredLanguageCode) {
                         "fr" => "fr",
                         "it" => "it",
+                        "bg" => "bg",
                         _ => "en",
                       },
                       decoration: InputDecoration(labelText: l10n.profileLanguage),
@@ -294,6 +295,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         DropdownMenuItem(value: "en", child: Text(l10n.languageEnglish)),
                         DropdownMenuItem(value: "fr", child: Text(l10n.languageFrench)),
                         DropdownMenuItem(value: "it", child: Text(l10n.languageItalian)),
+                        DropdownMenuItem(value: "bg", child: Text(l10n.languageBulgarian)),
                       ],
                       onChanged: profileState.isLoading
                           ? null

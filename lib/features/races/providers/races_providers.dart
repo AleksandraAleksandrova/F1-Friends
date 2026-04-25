@@ -2,6 +2,7 @@ import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:http/http.dart" as http;
 
 import "../data/f1_api_service.dart";
+import "../domain/race_result.dart";
 import "../data/http_f1_api_service.dart";
 import "../domain/race_weekend.dart";
 
@@ -41,6 +42,15 @@ final currentDriversProvider = FutureProvider<List<F1Driver>>((ref) async {
 final racesBySeasonProvider = FutureProvider.family<List<RaceWeekend>, int>((ref, seasonYear) async {
   final api = ref.watch(f1ApiServiceProvider);
   return api.fetchRacesBySeason(seasonYear);
+});
+
+final officialRaceResultProvider = FutureProvider.family<RaceResult?, RaceWeekend>((ref, race) async {
+  final api = ref.watch(f1ApiServiceProvider);
+  return api.fetchRaceResultForRound(
+    seasonYear: race.seasonYear,
+    round: race.round,
+    raceId: race.id,
+  );
 });
 
 Future<T?> _safeCall<T>(Future<T> Function() action) async {

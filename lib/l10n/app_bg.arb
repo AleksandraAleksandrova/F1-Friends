@@ -1,0 +1,361 @@
+{
+  "@@locale": "bg",
+  "appTitle": "F1 Friends",
+  "authSignIn": "Вход",
+  "authCreateAccount": "Създаване на акаунт",
+  "authNeedAccount": "Нямате акаунт? Регистрирайте се",
+  "authHaveAccount": "Имате акаунт? Влезте",
+  "authEmailOrUsername": "Имейл или потребителско име",
+  "authUsername": "Потребителско име",
+  "authEmail": "Имейл",
+  "authPassword": "Парола",
+  "authForgotPassword": "Забравена парола?",
+  "authRegister": "Регистрация",
+  "authEnterEmailOrUsername": "Въведете имейл или потребителско име",
+  "authEnterValidEmail": "Въведете валиден имейл",
+  "authUsernameValidation": "Потребителско име: поне 3 символа, само букви/цифри/_",
+  "authPasswordMin": "Паролата трябва да е поне 6 символа",
+  "authPasswordRule": "Паролата трябва да съдържа поне една буква и една цифра",
+  "authResetPassword": "Нулиране на парола",
+  "authAccountEmail": "Имейл на акаунта",
+  "commonCancel": "Отказ",
+  "commonCreate": "Създай",
+  "commonJoin": "Присъедини се",
+  "commonDelete": "Изтрий",
+  "commonUpdate": "Обнови",
+  "commonSave": "Запази",
+  "commonEdit": "Редактирай",
+  "commonLoading": "Зареждане...",
+  "commonRefresh": "Опресни",
+  "commonUnknown": "неизвестно",
+  "commonSearchHint": "Пишете за филтриране (напр. max)",
+  "authSendLink": "Изпрати линк",
+  "authPasswordResetSent": "Изпратен е линк за нулиране на паролата.",
+  "authErrorInvalidCredentials": "Невалидни данни. Проверете потребителското име/имейла и паролата.",
+  "authErrorEmailExists": "Този имейл вече е регистриран.",
+  "authErrorTooManyRequests": "Твърде много опити. Изчакайте и опитайте отново.",
+  "authErrorNetwork": "Мрежова грешка. Проверете връзката и опитайте отново.",
+  "authErrorInvalidEmail": "Невалиден имейл адрес.",
+  "authErrorUsernameLoginUnavailable": "Входът с потребителско име не е наличен, докато не публикувате Firestore правилата.",
+  "authErrorGeneric": "Неуспешна автентикация. Опитайте отново.",
+  "authErrorUnexpected": "Неочаквана грешка. Опитайте отново.",
+  "errorUserNotAuthenticated": "Трябва да влезете отново, за да продължите.",
+  "errorUsernameTaken": "Потребителското име вече е заето.",
+  "errorUsernameReserveFailed": "Не можа да се запази уникално потребителско име. Опитайте друго.",
+  "errorLeagueJoinCodeNotFound": "Не е намерена лига с този код.",
+  "errorLeagueJoinCodeInvalid": "Кодът за присъединяване е невалиден.",
+  "errorLeagueNotFound": "Лигата не беше намерена.",
+  "errorLeagueDeleteAdminOnly": "Само администраторът на лигата може да я изтрие.",
+  "errorJoinCodeGeneration": "Неуспешно генериране на уникален код. Опитайте отново.",
+  "errorPredictionsLocked": "Прогнозите са заключени за това състезание.",
+  "errorPredictionDriversRequired": "Всички полета за пилоти са задължителни.",
+  "errorPredictionPodiumDistinct": "P1, P2 и P3 трябва да са различни пилоти.",
+  "errorPredictionDnfNegative": "Броят на отпадналите не може да е отрицателен.",
+  "errorApiLoad": "В момента данните за Формула 1 не могат да бъдат заредени. Опитайте отново.",
+  "errorGenericAction": "Нещо се обърка. Опитайте отново.",
+  "homeNavLeagues": "Лиги",
+  "homeNavRaces": "Състезания",
+  "homeNavProfile": "Профил",
+  "leaguesTitle": "Моите лиги",
+  "leaguesSubtitle": "Състезавайте се в частни приятелски лиги",
+  "leaguesCreate": "Създай лига",
+  "leaguesJoin": "Присъедини се към лига",
+  "leaguesEmpty": "Все още няма лиги. Създайте лига или се присъединете с код.",
+  "leaguesAdmin": "Админ",
+  "leaguesSeason": "Сезон",
+  "leaguesMembers": "Участници",
+  "leaguesFailedLoad": "Неуспешно зареждане на лигите: {error}",
+  "@leaguesFailedLoad": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leaguesPermissionDenied": "Достъпът до Firestore е отказан. Публикувайте firestore.rules и рестартирайте приложението.",
+  "leaguesCreateDialogTitle": "Създай лига",
+  "leaguesName": "Име на лигата",
+  "leaguesNameValidation": "Въведете поне 3 символа",
+  "leaguesSeasonYear": "Година на сезона",
+  "leaguesInvalidYear": "Невалидна година",
+  "leaguesStartRound": "Начален кръг",
+  "leaguesEndRound": "Краен кръг",
+  "leaguesStartPositive": "Началният кръг трябва да е положителен",
+  "leaguesEndPositive": "Крайният кръг трябва да е положителен",
+  "leaguesStartMax": "Началният кръг трябва да е <= {maxRound}",
+  "@leaguesStartMax": {
+    "placeholders": {
+      "maxRound": {}
+    }
+  },
+  "leaguesEndMax": "Крайният кръг трябва да е <= {maxRound}",
+  "@leaguesEndMax": {
+    "placeholders": {
+      "maxRound": {}
+    }
+  },
+  "leaguesEndAfterStart": "Крайният кръг трябва да е >= началния",
+  "leaguesRoundsRange": "Кръговете трябва да са в диапазона 1..{maxRound}.",
+  "@leaguesRoundsRange": {
+    "placeholders": {
+      "maxRound": {}
+    }
+  },
+  "leaguesCreated": "Лигата е създадена.",
+  "leaguesJoinDialogTitle": "Присъединяване към лига",
+  "leaguesJoinCode": "Код за присъединяване",
+  "leaguesJoinCodeValidation": "Въведете валиден код",
+  "leaguesJoined": "Успешно се присъединихте към лигата.",
+  "leaguesAlreadyJoined": "Вече сте в тази лига. Повторно присъединяване не е позволено.",
+  "leagueDetailsTitle": "Детайли за лига",
+  "leagueDeleteTooltip": "Изтрий лигата",
+  "leagueDeleteTitle": "Изтриване на лига",
+  "leagueDeleteMessage": "Това ще премахне завинаги лигата и списъка с участници.",
+  "leagueDeleted": "Лигата е изтрита.",
+  "leagueDeleteFailed": "Неуспешно изтриване на лигата: {error}",
+  "@leagueDeleteFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueLoadRacesFailed": "Неуспешно зареждане на състезанията: {error}",
+  "@leagueLoadRacesFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueRoundsSeason": "Кръгове {startRound}-{endRound}, сезон {seasonYear}",
+  "@leagueRoundsSeason": {
+    "placeholders": {
+      "startRound": {},
+      "endRound": {},
+      "seasonYear": {}
+    }
+  },
+  "leagueMembersCount": "Участници: {count}",
+  "@leagueMembersCount": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "leagueNoRaces": "Няма състезания в избрания диапазон на тази лига.",
+  "leagueRaceField": "Състезание",
+  "leaguePredictionsForRound": "Прогнози за R{round}",
+  "@leaguePredictionsForRound": {
+    "placeholders": {
+      "round": {}
+    }
+  },
+  "leagueEditMine": "Редактирай моята",
+  "leaguePredictionUpdated": "Прогнозата е обновена.",
+  "leagueLoadMembersFailed": "Неуспешно зареждане на участниците: {error}",
+  "@leagueLoadMembersFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueLoadPredictionsFailed": "Неуспешно зареждане на прогнозите: {error}",
+  "@leagueLoadPredictionsFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueYouWithName": "Вие ({name})",
+  "@leagueYouWithName": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "leaguePoints": "{points} т.",
+  "@leaguePoints": {
+    "placeholders": {
+      "points": {}
+    }
+  },
+  "leagueRoundPoints": "Кръг: {points} т.",
+  "@leagueRoundPoints": {
+    "placeholders": {
+      "points": {}
+    }
+  },
+  "leagueOfficialPointsShown": "Показани са официалните точки за кръга от API на Формула 1.",
+  "leagueNoPrediction": "Все още няма подадена прогноза.",
+  "leaguePredictionSummary": "P1 {p1} | P2 {p2} | P3 {p3} | FL {fl} | DNF {dnf}",
+  "@leaguePredictionSummary": {
+    "placeholders": {
+      "p1": {},
+      "p2": {},
+      "p3": {},
+      "fl": {},
+      "dnf": {}
+    }
+  },
+  "leagueMockApplyTitle": "Прилагане на тестов резултат",
+  "leagueFastestLap": "Най-бърза обиколка",
+  "leagueDnfCount": "Брой отпаднали",
+  "leagueSelectAllFields": "Изберете всички задължителни полета.",
+  "leagueDistinctPodiumDrivers": "P1, P2 и P3 трябва да са различни пилоти.",
+  "leagueDnfNonNegative": "Броят на отпадналите трябва да е неотрицателен.",
+  "leagueMockApplied": "Тестовото точкуване е приложено. Класирането е обновено.",
+  "leagueMockApplyFailed": "Неуспешно прилагане на тестов резултат: {error}",
+  "@leagueMockApplyFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueMockReverted": "Тестовите точки за това състезание са премахнати.",
+  "leagueMockRevertFailed": "Неуспешно премахване на тестовите точки: {error}",
+  "@leagueMockRevertFailed": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "leagueMockApplyButton": "Приложи тестов резултат",
+  "leagueMockRevertButton": "Премахни тестовите точки",
+  "leagueDemoTools": "Демо инструменти",
+  "leagueShowDemoTools": "Покажи демо инструментите",
+  "leagueHideDemoTools": "Скрий демо инструментите",
+  "racesTitle": "Състезания",
+  "racesNextRace": "Следващо състезание",
+  "racesLastRace": "Последно състезание",
+  "racesLatestResults": "Последни резултати",
+  "racesNearestCircuit": "Най-близка писта",
+  "racesCurrentSeasonRounds": "Кръгове от текущия сезон",
+  "racesNoUpcoming": "API не върна информация за предстоящо състезание.",
+  "racesNoLast": "API не върна детайли за последното състезание.",
+  "racesNoResults": "Няма налични резултати.",
+  "racesNearestCircuitUnavailable": "Локацията не е налична или няма координати за пистата.",
+  "racesNoSeasonRaces": "Няма намерени състезания за текущия сезон.",
+  "racesFailedLoadApi": "Неуспешно зареждане на данни за състезанията от API: {error}",
+  "@racesFailedLoadApi": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "racesLocked": "Заключено",
+  "racesFinished": "Приключило",
+  "racesPredict": "Прогнозирай",
+  "racesPredictionSaved": "Прогнозата е запазена.",
+  "racesLock": "Заключване: {date}",
+  "@racesLock": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "racesRoundSeason": "Кръг {round}, сезон {season}",
+  "@racesRoundSeason": {
+    "placeholders": {
+      "round": {},
+      "season": {}
+    }
+  },
+  "racesRaceStart": "Старт на състезанието: {date}",
+  "@racesRaceStart": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "racesExpectedEnd": "Очакван край: {date}",
+  "@racesExpectedEnd": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "racesQualyStart": "Старт на квалификацията: {date}",
+  "@racesQualyStart": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "racesFastestLap": "Най-бърза обиколка: {driver}",
+  "@racesFastestLap": {
+    "placeholders": {
+      "driver": {}
+    }
+  },
+  "racesDnfs": "Отпаднали: {count}",
+  "@racesDnfs": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "racesNearestCircuitRace": "Най-близката писта в календара този сезон: {race}",
+  "@racesNearestCircuitRace": {
+    "placeholders": {
+      "race": {}
+    }
+  },
+  "racesNearestCircuitDistance": "Приблизително разстояние: {distanceKm} км",
+  "@racesNearestCircuitDistance": {
+    "placeholders": {
+      "distanceKm": {}
+    }
+  },
+  "predictionTitle": "Прогноза: {raceName}",
+  "@predictionTitle": {
+    "placeholders": {
+      "raceName": {}
+    }
+  },
+  "predictionP1Driver": "Пилот за P1",
+  "predictionP2Driver": "Пилот за P2",
+  "predictionP3Driver": "Пилот за P3",
+  "predictionFastestLapDriver": "Пилот за най-бърза обиколка",
+  "predictionDnfOptional": "Брой отпаднали (по избор)",
+  "predictionSelectAllDrivers": "Моля, изберете всички задължителни пилоти.",
+  "predictionDnfInteger": "Броят на отпадналите трябва да е неотрицателно цяло число.",
+  "predictionPodiumDistinct": "P1, P2 и P3 трябва да са различни.",
+  "predictionLockedAfterQualy": "Прогнозите са заключени за това състезание (квалификацията е приключила).",
+  "predictionPermissionDenied": "Достъпът до Firestore е отказан. Публикувайте последните правила и рестартирайте приложението.",
+  "profileTitle": "Профил",
+  "profileFailedLoad": "Неуспешно зареждане на профила: {error}",
+  "@profileFailedLoad": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileChangePhoto": "Промени снимката",
+  "profileChooseFromGallery": "Избери от галерия",
+  "profileTakePhoto": "Направи снимка",
+  "profileUsername": "Потребителско име",
+  "profileEditUsername": "Редактирай потребителско име",
+  "profileUsernameHelper": "Поне 3 символа",
+  "profileEmail": "Имейл",
+  "profileMyOverview": "Моят преглед",
+  "profileLoadingStats": "Зареждане на статистика...",
+  "profileStatsUnavailable": "Статистиката не е налична: {error}",
+  "@profileStatsUnavailable": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "profileJoinedLeagues": "Участия в лиги: {count}",
+  "@profileJoinedLeagues": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "profileCreatedLeagues": "Създадени лиги: {count}",
+  "@profileCreatedLeagues": {
+    "placeholders": {
+      "count": {}
+    }
+  },
+  "profileBestLeaderboardPlace": "Най-добро място в класиране: {place}",
+  "@profileBestLeaderboardPlace": {
+    "placeholders": {
+      "place": {}
+    }
+  },
+  "profileBestLeaderboardPlaceNone": "Най-добро място в класиране: Няма",
+  "profileLanguage": "Език",
+  "profileSignOut": "Изход",
+  "projectLoadingFailed": "Тази секция не може да бъде заредена в момента.",
+  "languageEnglish": "Английски",
+  "languageFrench": "Френски",
+  "languageItalian": "Италиански",
+  "languageBulgarian": "Български",
+  "notificationsChannelName": "Напомняния за прогнози",
+  "notificationsChannelDescription": "Напомняния за подаване на прогнози за състезания",
+  "notificationsDefaultTitle": "F1 Friends",
+  "notificationsDefaultBody": "Налична е нова актуализация.",
+  "notificationsStartupBody": "Създайте лига и поканете приятели да прогнозират следващото състезание!"
+}

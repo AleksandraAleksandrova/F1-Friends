@@ -3,6 +3,10 @@ class RaceWeekend {
   final int seasonYear;
   final int round;
   final String raceName;
+  final String circuitId;
+  final String circuitName;
+  final String country;
+  final String city;
   final DateTime startTimeUtc;
   final int numberOfLaps;
   final DateTime? qualifyingStartUtc;
@@ -12,6 +16,10 @@ class RaceWeekend {
     required this.seasonYear,
     required this.round,
     required this.raceName,
+    required this.circuitId,
+    required this.circuitName,
+    required this.country,
+    required this.city,
     required this.startTimeUtc,
     required this.numberOfLaps,
     required this.qualifyingStartUtc,

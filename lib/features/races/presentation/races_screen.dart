@@ -6,7 +6,6 @@ import "../../../core/utils/app_error_text.dart";
 
 import "../../predictions/presentation/prediction_dialog.dart";
 import "../../predictions/providers/predictions_providers.dart";
-import "../data/f1_api_service.dart";
 import "../domain/race_weekend.dart";
 import "../providers/races_providers.dart";
 
@@ -81,13 +80,6 @@ class RacesScreen extends ConsumerWidget {
                 child: hub.lastRace == null
                     ? Text(l10n.racesNoLast)
                     : _RaceTile(race: hub.lastRace!),
-              ),
-              const SizedBox(height: 12),
-              _SectionCard(
-                title: l10n.racesLatestResults,
-                child: hub.latestResults == null
-                    ? Text(l10n.racesNoResults)
-                    : _LatestResultsView(summary: hub.latestResults!),
               ),
               const SizedBox(height: 12),
               _SectionCard(
@@ -299,42 +291,5 @@ class _RaceTile extends StatelessWidget {
           Text(l10n.racesQualyStart(RacesScreen.formatUtc(context, race.qualifyingStartUtc!))),
       ],
     );
-  }
-}
-
-class _LatestResultsView extends StatelessWidget {
-  const _LatestResultsView({required this.summary});
-
-  final LatestRaceSummary summary;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(summary.raceName, style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: 4),
-        Text(l10n.racesRoundSeason(summary.round, summary.seasonYear)),
-        const SizedBox(height: 8),
-        ...summary.podium.map((entry) {
-          return Text("${entry.position}. ${entry.shortName}  ${entry.fullName}");
-        }),
-        const SizedBox(height: 8),
-        Text(l10n.racesFastestLap(_driverLabel(context, summary.fastestLapDriverId))),
-        Text(l10n.racesDnfs(summary.dnfCount ?? 0)),
-      ],
-    );
-  }
-
-  String _driverLabel(BuildContext context, String? id) {
-    if (id == null || id.isEmpty) {
-      return AppLocalizations.of(context)!.commonUnknown;
-    }
-    final pretty = id
-        .split("_")
-        .map((p) => p.isEmpty ? p : "${p[0].toUpperCase()}${p.substring(1)}")
-        .join(" ");
-    return pretty;
   }
 }

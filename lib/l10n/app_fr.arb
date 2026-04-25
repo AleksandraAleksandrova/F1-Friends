@@ -170,6 +170,13 @@
       "points": {}
     }
   },
+  "leagueRoundPoints": "Manche : {points} pts",
+  "@leagueRoundPoints": {
+    "placeholders": {
+      "points": {}
+    }
+  },
+  "leagueOfficialPointsShown": "Les points officiels de cette manche proviennent de l'API Formula 1.",
   "leagueNoPrediction": "Aucune prédiction envoyée pour le moment.",
   "leaguePredictionSummary": "P1 {p1} | P2 {p2} | P3 {p3} | MT {fl} | DNF {dnf}",
   "@leaguePredictionSummary": {
@@ -210,10 +217,12 @@
   "racesNextRace": "Prochaine course",
   "racesLastRace": "Dernière course",
   "racesLatestResults": "Derniers résultats",
+  "racesNearestCircuit": "Circuit le plus proche",
   "racesCurrentSeasonRounds": "Manches de la saison en cours",
   "racesNoUpcoming": "Aucune prochaine course renvoyée par l'API.",
   "racesNoLast": "Aucun détail de la dernière course renvoyé par l'API.",
   "racesNoResults": "Aucune donnée de résultat disponible.",
+  "racesNearestCircuitUnavailable": "Localisation indisponible ou coordonnées de circuit introuvables.",
   "racesNoSeasonRaces": "Aucune course trouvée pour la saison en cours.",
   "racesFailedLoadApi": "Échec du chargement des données de course de l'API : {error}",
   "@racesFailedLoadApi": {
@@ -266,6 +275,18 @@
   "@racesDnfs": {
     "placeholders": {
       "count": {}
+    }
+  },
+  "racesNearestCircuitRace": "Circuit prévu le plus proche cette saison : {race}",
+  "@racesNearestCircuitRace": {
+    "placeholders": {
+      "race": {}
+    }
+  },
+  "racesNearestCircuitDistance": "Distance approximative : {distanceKm} km",
+  "@racesNearestCircuitDistance": {
+    "placeholders": {
+      "distanceKm": {}
     }
   },
   "predictionTitle": "Prédiction : {raceName}",
@@ -331,6 +352,7 @@
   "languageEnglish": "Anglais",
   "languageFrench": "Français",
   "languageItalian": "Italien",
+  "languageBulgarian": "Bulgare",
   "notificationsChannelName": "Rappels de prédiction",
   "notificationsChannelDescription": "Rappels pour envoyer les prédictions de course",
   "notificationsDefaultTitle": "F1 Friends",

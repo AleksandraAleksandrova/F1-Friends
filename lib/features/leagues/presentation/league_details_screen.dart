@@ -11,9 +11,11 @@ import "../../predictions/domain/prediction.dart";
 import "../../predictions/presentation/prediction_dialog.dart";
 import "../../predictions/providers/predictions_providers.dart";
 import "../../races/data/f1_api_service.dart";
+import "../../races/domain/race_result.dart";
 import "../../races/domain/race_weekend.dart";
 import "../../races/providers/races_providers.dart";
 import "../../scoring/domain/mock_race_result.dart";
+import "../../scoring/domain/scoring_logic.dart";
 import "../../scoring/providers/mock_scoring_providers.dart";
 import "../providers/leagues_providers.dart";
 
@@ -243,6 +245,9 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
               final predictionsAsync = selectedRace == null
                   ? const AsyncValue<List<Prediction>>.data(<Prediction>[])
                   : ref.watch(predictionsForRaceProvider(selectedRace.id));
+              final officialResultAsync = selectedRace == null
+                  ? const AsyncValue<RaceResult?>.data(null)
+                  : ref.watch(officialRaceResultProvider(selectedRace));
 
               return ListView(
                 padding: const EdgeInsets.all(16),
@@ -390,8 +395,23 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                               );
                             }
 
+                            final officialResult = officialResultAsync.valueOrNull;
+                            final isFinishedRace =
+                                !DateTime.now().toUtc().isBefore(selectedRace.expectedEndTimeUtc);
+
                             return Column(
                               children: [
+                                if (isFinishedRace && officialResult != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(bottom: 8),
+                                    child: Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        l10n.leagueOfficialPointsShown,
+                                        style: Theme.of(context).textTheme.bodyMedium,
+                                      ),
+                                    ),
+                                  ),
                                 for (var index = 0; index < members.length; index++) ...[
                                   if (index > 0) const SizedBox(height: 8),
                                   _MemberPredictionCard(
@@ -399,6 +419,14 @@ class _LeagueDetailsScreenState extends ConsumerState<LeagueDetailsScreen> {
                                     member: members[index],
                                     prediction: byUser[members[index].userId],
                                     currentUid: currentUid,
+                                    officialRoundPoints: officialResult == null
+                                        ? null
+                                        : ScoringLogic.computePoints(
+                                            prediction: byUser[members[index].userId],
+                                            result: officialResult,
+                                            rules: league.scoringRules,
+                                          ),
+                                    selectedRaceId: selectedRace.id,
                                   ),
                                 ],
                               ],
@@ -686,12 +714,16 @@ class _MemberPredictionCard extends ConsumerWidget {
     required this.member,
     required this.prediction,
     required this.currentUid,
+    required this.officialRoundPoints,
+    required this.selectedRaceId,
   });
 
   final int index;
   final LeagueMember member;
   final Prediction? prediction;
   final String? currentUid;
+  final int? officialRoundPoints;
+  final String? selectedRaceId;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -703,6 +735,11 @@ class _MemberPredictionCard extends ConsumerWidget {
       orElse: () => (uid.length > 6 ? uid.substring(0, 6) : uid),
     );
     final mine = uid == currentUid;
+    final storedRoundPoints = selectedRaceId == null ? null : member.racePoints[selectedRaceId!];
+    final shownRoundPoints = storedRoundPoints ?? officialRoundPoints;
+    final shownTotalPoints = storedRoundPoints == null && officialRoundPoints != null
+        ? member.totalPoints + officialRoundPoints!
+        : member.totalPoints;
 
     return Card(
       child: Padding(
@@ -732,7 +769,20 @@ class _MemberPredictionCard extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Chip(label: Text(l10n.leaguePoints(member.totalPoints))),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Chip(label: Text(l10n.leaguePoints(shownTotalPoints))),
+                    if (shownRoundPoints != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          l10n.leagueRoundPoints(shownRoundPoints),
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 10),

@@ -160,7 +160,7 @@ final profileControllerProvider = StateNotifierProvider<ProfileController, Async
 final appLocaleProvider = Provider<Locale?>((ref) {
   final user = ref.watch(currentAppUserProvider).value;
   final code = user?.preferredLanguageCode?.trim().toLowerCase();
-  if (code == "en" || code == "fr" || code == "it") {
+  if (code == "en" || code == "fr" || code == "it" || code == "bg") {
     return Locale(code!);
   }
   return null;

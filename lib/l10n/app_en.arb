@@ -170,6 +170,13 @@
       "points": {}
     }
   },
+  "leagueRoundPoints": "Round: {points} pts",
+  "@leagueRoundPoints": {
+    "placeholders": {
+      "points": {}
+    }
+  },
+  "leagueOfficialPointsShown": "Official round points are shown from the Formula 1 API.",
   "leagueNoPrediction": "No prediction submitted yet.",
   "leaguePredictionSummary": "P1 {p1} | P2 {p2} | P3 {p3} | FL {fl} | DNF {dnf}",
   "@leaguePredictionSummary": {
@@ -210,10 +217,12 @@
   "racesNextRace": "Next Race",
   "racesLastRace": "Last Race",
   "racesLatestResults": "Latest Results",
+  "racesNearestCircuit": "Nearest Circuit",
   "racesCurrentSeasonRounds": "Current Season Rounds",
   "racesNoUpcoming": "No upcoming race returned by API.",
   "racesNoLast": "No last race details returned by API.",
   "racesNoResults": "No result data available.",
+  "racesNearestCircuitUnavailable": "Location unavailable or no circuit coordinates found.",
   "racesNoSeasonRaces": "No races found for current season.",
   "racesFailedLoadApi": "Failed to load API race data: {error}",
   "@racesFailedLoadApi": {
@@ -266,6 +275,18 @@
   "@racesDnfs": {
     "placeholders": {
       "count": {}
+    }
+  },
+  "racesNearestCircuitRace": "Closest scheduled circuit in this season: {race}",
+  "@racesNearestCircuitRace": {
+    "placeholders": {
+      "race": {}
+    }
+  },
+  "racesNearestCircuitDistance": "Approximate distance: {distanceKm} km",
+  "@racesNearestCircuitDistance": {
+    "placeholders": {
+      "distanceKm": {}
     }
   },
   "predictionTitle": "Prediction: {raceName}",
@@ -331,6 +352,7 @@
   "languageEnglish": "English",
   "languageFrench": "French",
   "languageItalian": "Italian",
+  "languageBulgarian": "Bulgarian",
   "notificationsChannelName": "Prediction Reminders",
   "notificationsChannelDescription": "Reminders to submit race predictions",
   "notificationsDefaultTitle": "F1 Friends",

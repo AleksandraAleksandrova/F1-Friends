@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart' as intl;
 
+import 'app_localizations_bg.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_fr.dart';
 import 'app_localizations_it.dart';
@@ -95,6 +96,7 @@ abstract class AppLocalizations {
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
+    Locale('bg'),
     Locale('en'),
     Locale('fr'),
     Locale('it')
@@ -719,6 +721,18 @@ abstract class AppLocalizations {
   /// **'{points} pts'**
   String leaguePoints(Object points);
 
+  /// No description provided for @leagueRoundPoints.
+  ///
+  /// In en, this message translates to:
+  /// **'Round: {points} pts'**
+  String leagueRoundPoints(Object points);
+
+  /// No description provided for @leagueOfficialPointsShown.
+  ///
+  /// In en, this message translates to:
+  /// **'Official round points are shown from the Formula 1 API.'**
+  String get leagueOfficialPointsShown;
+
   /// No description provided for @leagueNoPrediction.
   ///
   /// In en, this message translates to:
@@ -846,6 +860,12 @@ abstract class AppLocalizations {
   /// **'Latest Results'**
   String get racesLatestResults;
 
+  /// No description provided for @racesNearestCircuit.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearest Circuit'**
+  String get racesNearestCircuit;
+
   /// No description provided for @racesCurrentSeasonRounds.
   ///
   /// In en, this message translates to:
@@ -869,6 +889,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No result data available.'**
   String get racesNoResults;
+
+  /// No description provided for @racesNearestCircuitUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Location unavailable or no circuit coordinates found.'**
+  String get racesNearestCircuitUnavailable;
 
   /// No description provided for @racesNoSeasonRaces.
   ///
@@ -947,6 +973,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'DNFs: {count}'**
   String racesDnfs(Object count);
+
+  /// No description provided for @racesNearestCircuitRace.
+  ///
+  /// In en, this message translates to:
+  /// **'Closest scheduled circuit in this season: {race}'**
+  String racesNearestCircuitRace(Object race);
+
+  /// No description provided for @racesNearestCircuitDistance.
+  ///
+  /// In en, this message translates to:
+  /// **'Approximate distance: {distanceKm} km'**
+  String racesNearestCircuitDistance(Object distanceKm);
 
   /// No description provided for @predictionTitle.
   ///
@@ -1146,6 +1184,12 @@ abstract class AppLocalizations {
   /// **'Italian'**
   String get languageItalian;
 
+  /// No description provided for @languageBulgarian.
+  ///
+  /// In en, this message translates to:
+  /// **'Bulgarian'**
+  String get languageBulgarian;
+
   /// No description provided for @notificationsChannelName.
   ///
   /// In en, this message translates to:
@@ -1188,7 +1232,7 @@ class _AppLocalizationsDelegate
 
   @override
   bool isSupported(Locale locale) =>
-      <String>['en', 'fr', 'it'].contains(locale.languageCode);
+      <String>['bg', 'en', 'fr', 'it'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -1197,6 +1241,8 @@ class _AppLocalizationsDelegate
 AppLocalizations lookupAppLocalizations(Locale locale) {
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
+    case 'bg':
+      return AppLocalizationsBg();
     case 'en':
       return AppLocalizationsEn();
     case 'fr':
