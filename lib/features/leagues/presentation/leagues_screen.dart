@@ -8,6 +8,7 @@ import "league_details_screen.dart";
 import "../domain/league.dart";
 import "../providers/leagues_providers.dart";
 import "../../races/providers/races_providers.dart";
+import "../../races/domain/race_weekend.dart";
 
 class LeaguesScreen extends ConsumerWidget {
   const LeaguesScreen({super.key});
@@ -111,65 +112,24 @@ class LeaguesScreen extends ConsumerWidget {
                       ),
                     );
                   }
-                  final now = DateTime.now().toUtc();
-                  final seasonYear = raceHubAsync.maybeWhen(
-                    data: (hub) => hub.seasonRaces.isNotEmpty ? hub.seasonRaces.first.seasonYear : DateTime.now().year,
-                    orElse: () => DateTime.now().year,
-                  );
-                  final latestFinishedRound = raceHubAsync.maybeWhen(
-                    data: (hub) => hub.seasonRaces
-                        .where((race) => !now.isBefore(race.expectedEndTimeUtc))
-                        .fold<int>(0, (maxRound, race) => race.round > maxRound ? race.round : maxRound),
-                    orElse: () => 0,
-                  );
-
-                  bool isPastLeague(League league) {
-                    if (league.seasonYear < seasonYear) {
-                      return true;
-                    }
-                    if (league.seasonYear > seasonYear) {
-                      return false;
-                    }
-                    return league.endRound <= latestFinishedRound;
-                  }
-
-                  final activeLeagues = leagues.where((league) => !isPastLeague(league)).toList()
-                    ..sort((a, b) {
-                      final seasonCompare = b.seasonYear.compareTo(a.seasonYear);
-                      if (seasonCompare != 0) {
-                        return seasonCompare;
-                      }
-                      return a.endRound.compareTo(b.endRound);
-                    });
-                  final pastLeagues = leagues.where(isPastLeague).toList()
-                    ..sort((a, b) {
-                      final seasonCompare = b.seasonYear.compareTo(a.seasonYear);
-                      if (seasonCompare != 0) {
-                        return seasonCompare;
-                      }
-                      return b.endRound.compareTo(a.endRound);
-                    });
-
-                  return ListView(
-                    children: [
-                      if (activeLeagues.isNotEmpty) ...[
-                        Text(
-                          l10n.leaguesActiveSection,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 10),
-                        ..._buildLeagueCards(context, ref, activeLeagues, l10n),
-                      ],
-                      if (pastLeagues.isNotEmpty) ...[
-                        if (activeLeagues.isNotEmpty) const SizedBox(height: 18),
-                        Text(
-                          l10n.leaguesPastSection,
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 10),
-                        ..._buildLeagueCards(context, ref, pastLeagues, l10n),
-                      ],
-                    ],
+                  return raceHubAsync.when(
+                    data: (hub) => _buildSectionedLeaguesList(
+                      context,
+                      ref,
+                      leagues,
+                      l10n,
+                      hubSeasonYear: hub.seasonRaces.isNotEmpty ? hub.seasonRaces.first.seasonYear : DateTime.now().year,
+                      latestFinishedRound: _latestFinishedRound(hub.seasonRaces),
+                    ),
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (_, __) => _buildSectionedLeaguesList(
+                      context,
+                      ref,
+                      leagues,
+                      l10n,
+                      hubSeasonYear: DateTime.now().year,
+                      latestFinishedRound: 0,
+                    ),
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -204,6 +164,75 @@ class LeaguesScreen extends ConsumerWidget {
         _LeagueCard(league: leagues[index]),
       ],
     ];
+  }
+
+  Widget _buildSectionedLeaguesList(
+    BuildContext context,
+    WidgetRef ref,
+    List<League> leagues,
+    AppLocalizations l10n, {
+    required int hubSeasonYear,
+    required int latestFinishedRound,
+  }) {
+    bool isPastLeague(League league) {
+      if (league.seasonYear < hubSeasonYear) {
+        return true;
+      }
+      if (league.seasonYear > hubSeasonYear) {
+        return false;
+      }
+      return league.endRound <= latestFinishedRound;
+    }
+
+    final activeLeagues = leagues.where((league) => !isPastLeague(league)).toList()
+      ..sort((a, b) {
+        final seasonCompare = b.seasonYear.compareTo(a.seasonYear);
+        if (seasonCompare != 0) {
+          return seasonCompare;
+        }
+        return a.endRound.compareTo(b.endRound);
+      });
+    final pastLeagues = leagues.where(isPastLeague).toList()
+      ..sort((a, b) {
+        final seasonCompare = b.seasonYear.compareTo(a.seasonYear);
+        if (seasonCompare != 0) {
+          return seasonCompare;
+        }
+        return b.endRound.compareTo(a.endRound);
+      });
+
+    return ListView(
+      children: [
+        if (activeLeagues.isNotEmpty) ...[
+          Text(
+            l10n.leaguesActiveSection,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 10),
+          ..._buildLeagueCards(context, ref, activeLeagues, l10n),
+        ],
+        if (pastLeagues.isNotEmpty) ...[
+          if (activeLeagues.isNotEmpty) const SizedBox(height: 18),
+          Text(
+            l10n.leaguesPastSection,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 10),
+          ..._buildLeagueCards(context, ref, pastLeagues, l10n),
+        ],
+      ],
+    );
+  }
+
+  int _latestFinishedRound(List<RaceWeekend> seasonRaces) {
+    final now = DateTime.now().toUtc();
+    var latestFinishedRound = 0;
+    for (final race in seasonRaces) {
+      if (!now.isBefore(race.expectedEndTimeUtc) && race.round > latestFinishedRound) {
+        latestFinishedRound = race.round;
+      }
+    }
+    return latestFinishedRound;
   }
 
 
