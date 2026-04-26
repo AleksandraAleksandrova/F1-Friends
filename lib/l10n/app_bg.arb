@@ -1,4 +1,4 @@
-{
+﻿{
   "@@locale": "bg",
   "appTitle": "F1 Friends",
   "authSignIn": "Вход",
@@ -58,6 +58,8 @@
   "homeNavProfile": "Профил",
   "leaguesTitle": "Моите лиги",
   "leaguesSubtitle": "Състезавайте се в частни приятелски лиги",
+  "leaguesActiveSection": "Активни лиги",
+  "leaguesPastSection": "Приключили лиги",
   "leaguesCreate": "Създай лига",
   "leaguesJoin": "Присъедини се към лига",
   "leaguesEmpty": "Все още няма лиги. Създайте лига или се присъединете с код.",

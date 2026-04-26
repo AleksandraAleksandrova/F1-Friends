@@ -58,6 +58,8 @@
   "homeNavProfile": "Profilo",
   "leaguesTitle": "Le mie leghe",
   "leaguesSubtitle": "Competi con i tuoi amici in leghe private",
+  "leaguesActiveSection": "Leghe attive",
+  "leaguesPastSection": "Leghe concluse",
   "leaguesCreate": "Crea lega",
   "leaguesJoin": "Partecipa a una lega",
   "leaguesEmpty": "Nessuna lega per ora. Creane una o entra con un codice.",

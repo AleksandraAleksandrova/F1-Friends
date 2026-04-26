@@ -200,6 +200,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get leaguesSubtitle => 'Competi con i tuoi amici in leghe private';
 
   @override
+  String get leaguesActiveSection => 'Leghe attive';
+
+  @override
+  String get leaguesPastSection => 'Leghe concluse';
+
+  @override
   String get leaguesCreate => 'Crea lega';
 
   @override

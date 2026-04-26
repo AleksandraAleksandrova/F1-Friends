@@ -450,6 +450,18 @@ abstract class AppLocalizations {
   /// **'Compete with private friend leagues'**
   String get leaguesSubtitle;
 
+  /// No description provided for @leaguesActiveSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Active Leagues'**
+  String get leaguesActiveSection;
+
+  /// No description provided for @leaguesPastSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Past Leagues'**
+  String get leaguesPastSection;
+
   /// No description provided for @leaguesCreate.
   ///
   /// In en, this message translates to:

@@ -197,6 +197,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leaguesSubtitle => 'Compete with private friend leagues';
 
   @override
+  String get leaguesActiveSection => 'Active Leagues';
+
+  @override
+  String get leaguesPastSection => 'Past Leagues';
+
+  @override
   String get leaguesCreate => 'Create League';
 
   @override

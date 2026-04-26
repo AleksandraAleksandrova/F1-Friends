@@ -200,6 +200,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get leaguesSubtitle => 'Състезавайте се в частни приятелски лиги';
 
   @override
+  String get leaguesActiveSection => 'Активни лиги';
+
+  @override
+  String get leaguesPastSection => 'Приключили лиги';
+
+  @override
   String get leaguesCreate => 'Създай лига';
 
   @override

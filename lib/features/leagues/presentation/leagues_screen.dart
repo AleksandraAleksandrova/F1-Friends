@@ -1,10 +1,11 @@
-import "package:flutter/material.dart";
+﻿import "package:flutter/material.dart";
 import "package:flutter_riverpod/flutter_riverpod.dart";
 import "package:cloud_firestore/cloud_firestore.dart";
 import "../../../l10n/app_localizations.dart";
 import "../../../core/utils/app_error_text.dart";
 
 import "league_details_screen.dart";
+import "../domain/league.dart";
 import "../providers/leagues_providers.dart";
 import "../../races/providers/races_providers.dart";
 
@@ -15,6 +16,7 @@ class LeaguesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final leaguesAsync = ref.watch(userLeaguesProvider);
+    final raceHubAsync = ref.watch(raceHubProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.leaguesTitle)),
@@ -109,73 +111,65 @@ class LeaguesScreen extends ConsumerWidget {
                       ),
                     );
                   }
-                  return ListView.separated(
-                    itemCount: leagues.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final league = leagues[index];
-                      final adminNameAsync = ref.watch(usernameByUserIdProvider(league.adminUserId));
-                      final adminDisplay = adminNameAsync.maybeWhen(
-                        data: (name) => name,
-                        orElse: () => (league.adminUserId.length > 6
-                            ? league.adminUserId.substring(0, 6)
-                            : league.adminUserId),
-                      );
-                      return Card(
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => LeagueDetailsScreen(league: league),
-                              ),
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        league.name,
-                                        style: Theme.of(context).textTheme.titleMedium,
-                                      ),
-                                    ),
-                                    Chip(label: Text(league.joinCode)),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
-                                  children: [
-                                    _LeagueMetaChip(
-                                      icon: Icons.verified_user_outlined,
-                                      label: "${l10n.leaguesAdmin} $adminDisplay",
-                                    ),
-                                    _LeagueMetaChip(
-                                      icon: Icons.calendar_month_outlined,
-                                      label: "${l10n.leaguesSeason} ${league.seasonYear}",
-                                    ),
-                                    _LeagueMetaChip(
-                                      icon: Icons.flag_outlined,
-                                      label: "R${league.startRound}-R${league.endRound}",
-                                    ),
-                                    _LeagueMetaChip(
-                                      icon: Icons.groups_2_outlined,
-                                      label: "${l10n.leaguesMembers} ${league.memberCount}",
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
+                  final now = DateTime.now().toUtc();
+                  final seasonYear = raceHubAsync.maybeWhen(
+                    data: (hub) => hub.seasonRaces.isNotEmpty ? hub.seasonRaces.first.seasonYear : DateTime.now().year,
+                    orElse: () => DateTime.now().year,
+                  );
+                  final latestFinishedRound = raceHubAsync.maybeWhen(
+                    data: (hub) => hub.seasonRaces
+                        .where((race) => !now.isBefore(race.expectedEndTimeUtc))
+                        .fold<int>(0, (maxRound, race) => race.round > maxRound ? race.round : maxRound),
+                    orElse: () => 0,
+                  );
+
+                  bool isPastLeague(League league) {
+                    if (league.seasonYear < seasonYear) {
+                      return true;
+                    }
+                    if (league.seasonYear > seasonYear) {
+                      return false;
+                    }
+                    return league.endRound <= latestFinishedRound;
+                  }
+
+                  final activeLeagues = leagues.where((league) => !isPastLeague(league)).toList()
+                    ..sort((a, b) {
+                      final seasonCompare = b.seasonYear.compareTo(a.seasonYear);
+                      if (seasonCompare != 0) {
+                        return seasonCompare;
+                      }
+                      return a.endRound.compareTo(b.endRound);
+                    });
+                  final pastLeagues = leagues.where(isPastLeague).toList()
+                    ..sort((a, b) {
+                      final seasonCompare = b.seasonYear.compareTo(a.seasonYear);
+                      if (seasonCompare != 0) {
+                        return seasonCompare;
+                      }
+                      return b.endRound.compareTo(a.endRound);
+                    });
+
+                  return ListView(
+                    children: [
+                      if (activeLeagues.isNotEmpty) ...[
+                        Text(
+                          l10n.leaguesActiveSection,
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                      );
-                    },
+                        const SizedBox(height: 10),
+                        ..._buildLeagueCards(context, ref, activeLeagues, l10n),
+                      ],
+                      if (pastLeagues.isNotEmpty) ...[
+                        if (activeLeagues.isNotEmpty) const SizedBox(height: 18),
+                        Text(
+                          l10n.leaguesPastSection,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 10),
+                        ..._buildLeagueCards(context, ref, pastLeagues, l10n),
+                      ],
+                    ],
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
@@ -197,6 +191,21 @@ class LeaguesScreen extends ConsumerWidget {
     }
     return AppErrorText.describe(l10n, error);
   }
+
+  List<Widget> _buildLeagueCards(
+    BuildContext context,
+    WidgetRef ref,
+    List<League> leagues,
+    AppLocalizations l10n,
+  ) {
+    return [
+      for (var index = 0; index < leagues.length; index++) ...[
+        if (index > 0) const SizedBox(height: 10),
+        _LeagueCard(league: leagues[index]),
+      ],
+    ];
+  }
+
 
   Future<void> _showCreateLeagueDialog(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
@@ -442,6 +451,78 @@ class LeaguesScreen extends ConsumerWidget {
   }
 }
 
+class _LeagueCard extends ConsumerWidget {
+  const _LeagueCard({required this.league});
+
+  final League league;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final adminNameAsync = ref.watch(usernameByUserIdProvider(league.adminUserId));
+    final adminDisplay = adminNameAsync.maybeWhen(
+      data: (name) => name,
+      orElse: () => (league.adminUserId.length > 6
+          ? league.adminUserId.substring(0, 6)
+          : league.adminUserId),
+    );
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => LeagueDetailsScreen(league: league),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      league.name,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ),
+                  Chip(label: Text(league.joinCode)),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _LeagueMetaChip(
+                    icon: Icons.verified_user_outlined,
+                    label: "${l10n.leaguesAdmin} $adminDisplay",
+                  ),
+                  _LeagueMetaChip(
+                    icon: Icons.calendar_month_outlined,
+                    label: "${l10n.leaguesSeason} ${league.seasonYear}",
+                  ),
+                  _LeagueMetaChip(
+                    icon: Icons.flag_outlined,
+                    label: "R${league.startRound}-R${league.endRound}",
+                  ),
+                  _LeagueMetaChip(
+                    icon: Icons.groups_2_outlined,
+                    label: "${l10n.leaguesMembers} ${league.memberCount}",
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _LeagueMetaChip extends StatelessWidget {
   const _LeagueMetaChip({
     required this.icon,
@@ -475,3 +556,5 @@ class _LeagueMetaChip extends StatelessWidget {
     );
   }
 }
+
+

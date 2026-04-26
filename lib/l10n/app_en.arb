@@ -58,6 +58,8 @@
   "homeNavProfile": "Profile",
   "leaguesTitle": "My Leagues",
   "leaguesSubtitle": "Compete with private friend leagues",
+  "leaguesActiveSection": "Active Leagues",
+  "leaguesPastSection": "Past Leagues",
   "leaguesCreate": "Create League",
   "leaguesJoin": "Join League",
   "leaguesEmpty": "No leagues yet. Create one or join with a code.",
