@@ -121,7 +121,7 @@ class LeaguesScreen extends ConsumerWidget {
                       hubSeasonYear: hub.seasonRaces.isNotEmpty ? hub.seasonRaces.first.seasonYear : DateTime.now().year,
                       latestFinishedRound: _latestFinishedRound(hub.seasonRaces),
                     ),
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () => _buildLeagueSplitLoading(context, l10n),
                     error: (_, __) => _buildSectionedLeaguesList(
                       context,
                       ref,
@@ -220,6 +220,34 @@ class LeaguesScreen extends ConsumerWidget {
           const SizedBox(height: 10),
           ..._buildLeagueCards(context, ref, pastLeagues, l10n),
         ],
+      ],
+    );
+  }
+
+  Widget _buildLeagueSplitLoading(BuildContext context, AppLocalizations l10n) {
+    return ListView(
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            child: Row(
+              children: [
+                const SizedBox(
+                  height: 22,
+                  width: 22,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "${l10n.commonLoading} ${l10n.leaguesTitle.toLowerCase()}...",
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
